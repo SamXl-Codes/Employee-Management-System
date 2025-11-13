@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project Documentation (work in progress)
+CA2_ASSESSMENT_REPORT.md
+WORKSPACE_CLEANUP_SUMMARY.md
+B9CY108_CA_TWO_70%.pdf
