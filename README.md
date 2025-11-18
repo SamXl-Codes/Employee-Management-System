@@ -1,2 +1,2 @@
 # Employee-Management-System 
-A Python/Flask-based application using SQLite that manages employees, departments, roles, attendance, and leave requests, developed as part of the (CA-2 Advanced Programming Techniques) module. Created by Samuel Ogunlusi (20086108) and George M. Sherman (20079442). This repository will be updated regularly as the project progresses
+This project serves as our CA-2 for the Advanced Programming Techniques module and is developed by Samuel Ogunlusi (20086108) and George M. Sherman (20079442). It implements a complete employee management workflow, covering staff records, departmental structure, job roles, attendance tracking, and leave management. The repository will be updated regularly as development progresses.
