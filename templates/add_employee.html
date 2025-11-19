@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Add Employee{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">Add New Employee</h1>
+    <p class="text-gray-600 mt-1">Fill in the employee details below</p>
+</div>
+
+<div class="max-w-2xl bg-white rounded-lg shadow p-8">
+    <form method="POST" action="{{ url_for('add_employee') }}" class="space-y-6">
+        <!-- Personal Information Section -->
+        <div>
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Personal Information</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="name" class="form-label">
+                        Full Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           id="name" 
+                           name="name" 
+                           required 
+                           class="form-input"
+                           placeholder="John Doe">
+                </div>
+                
+                <div>
+                    <label for="email" class="form-label">
+                        Email Address <span class="text-red-500">*</span>
+                    </label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           required 
+                           class="form-input"
+                           placeholder="john.doe@company.com">
+                </div>
+                
+                <div>
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input type="tel" 
+                           id="phone" 
+                           name="phone" 
+                           class="form-input"
+                           placeholder="123-456-7890">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Employment Information Section -->
+        <div class="border-t pt-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Employment Information</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="department_id" class="form-label">
+                        Department <span class="text-red-500">*</span>
+                    </label>
+                    <select id="department_id" name="department_id" required class="form-input">
+                        <option value="">Select Department</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.department_id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="role_id" class="form-label">
+                        Job Role <span class="text-red-500">*</span>
+                    </label>
+                    <select id="role_id" name="role_id" required class="form-input">
+                        <option value="">Select Role</option>
+                        {% for role in roles %}
+                        <option value="{{ role.role_id }}">{{ role.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="salary" class="form-label">
+                        Salary <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" 
+                           id="salary" 
+                           name="salary" 
+                           required 
+                           step="0.01"
+                           min="0"
+                           class="form-input"
+                           placeholder="50000.00">
+                </div>
+                
+                <div>
+                    <label for="date_joined" class="form-label">
+                        Date Joined <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" 
+                           id="date_joined" 
+                           name="date_joined" 
+                           required 
+                           class="form-input">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="flex gap-3 justify-end border-t pt-6">
+            <a href="{{ url_for('employees') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Add Employee</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

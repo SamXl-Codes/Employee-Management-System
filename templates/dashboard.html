@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">Dashboard</h1>
+    <p class="text-gray-600 mt-1">Welcome back, {{ current_user }}! Here's your HR overview.</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Employees Card -->
+    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Employees</p>
+                <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.total_employees }}</p>
+            </div>
+            <div class="bg-blue-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Departments Card -->
+    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Departments</p>
+                <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.total_departments }}</p>
+            </div>
+            <div class="bg-green-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Leave Requests Card -->
+    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Pending Leaves</p>
+                <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.pending_leaves }}</p>
+            </div>
+            <div class="bg-yellow-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Job Roles Card -->
+    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Job Roles</p>
+                <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.total_roles }}</p>
+            </div>
+            <div class="bg-purple-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions & Pending Approvals -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div class="space-y-3">
+            {% if user_role == 'admin' %}
+            <a href="{{ url_for('add_employee') }}" class="block px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-md text-blue-700 font-medium transition-colors">
+                + Add New Employee
+            </a>
+            <a href="{{ url_for('attendance') }}" class="block px-4 py-3 bg-green-50 hover:bg-green-100 rounded-md text-green-700 font-medium transition-colors">
+                Mark Today's Attendance
+            </a>
+            <a href="{{ url_for('leave_requests') }}" class="block px-4 py-3 bg-yellow-50 hover:bg-yellow-100 rounded-md text-yellow-700 font-medium transition-colors">
+                Review Leave Requests
+            </a>
+            <a href="{{ url_for('reports') }}" class="block px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-md text-purple-700 font-medium transition-colors">
+                Generate Reports
+            </a>
+            {% else %}
+            <a href="{{ url_for('add_leave_request') }}" class="block px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-md text-blue-700 font-medium transition-colors">
+                Request Leave
+            </a>
+            <a href="{{ url_for('employees') }}" class="block px-4 py-3 bg-green-50 hover:bg-green-100 rounded-md text-green-700 font-medium transition-colors">
+                View Colleagues
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Pending Approvals (Admin Only) -->
+    {% if user_role == 'admin' and pending_leaves %}
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Pending Leave Approvals</h2>
+        <div class="space-y-3">
+            {% for leave in pending_leaves %}
+            <div class="border border-gray-200 rounded-md p-3">
+                <p class="font-medium text-gray-900">{{ leave.employee.name }}</p>
+                <p class="text-sm text-gray-600">{{ leave.start_date.strftime('%b %d') }} - {{ leave.end_date.strftime('%b %d, %Y') }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ leave.leave_type }} Leave • {{ leave.calculate_days() }} day(s)</p>
+            </div>
+            {% endfor %}
+            {% if pending_leaves|length > 0 %}
+            <a href="{{ url_for('leave_requests', status='Pending') }}" class="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium mt-2">
+                View All Pending Requests →
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% elif user_role == 'admin' %}
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Pending Leave Approvals</h2>
+        <p class="text-gray-500 text-center py-8">No pending leave requests</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
