@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}My Attendance{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">My Attendance Records</h1>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Total Days</h3>
+        <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_days }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Present</h3>
+        <p class="text-3xl font-bold text-green-600 mt-2">{{ present_days }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Absent</h3>
+        <p class="text-3xl font-bold text-red-600 mt-2">{{ absent_days }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Late</h3>
+        <p class="text-3xl font-bold text-yellow-600 mt-2">{{ late_days }}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold text-gray-900">Attendance Records</h2>
+    </div>
+    
+    {% if attendance_records %}
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in attendance_records %}
+                <tr>
+                    <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if record.status == 'Present' %}bg-green-100 text-green-800
+                            {% elif record.status == 'Absent' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ record.status }}
+                        </span>
+                    </td>
+                    <td class="text-sm text-gray-600">{{ record.notes or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-500">
+        No attendance records available
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

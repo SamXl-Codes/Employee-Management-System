@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">Attendance Tracking</h1>
+    <p class="text-gray-600 mt-1">Mark and view employee attendance</p>
+</div>
+
+<!-- Date Selector -->
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+    <form method="GET" action="{{ url_for('attendance') }}" class="flex items-center gap-4">
+        <label for="date" class="font-medium text-gray-700">Select Date:</label>
+        <input type="date" 
+               id="date" 
+               name="date" 
+               value="{{ selected_date.strftime('%Y-%m-%d') }}"
+               class="form-input"
+               onchange="this.form.submit()">
+    </form>
+</div>
+
+<!-- Attendance Form -->
+{% if user_role == 'admin' %}
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <form method="POST" action="{{ url_for('mark_attendance') }}">
+        <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+        
+        {% if employees %}
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    {% set existing = attendance_map.get(employee.employee_id) %}
+                    <tr>
+                        <td class="font-mono text-xs">{{ employee.employee_id }}</td>
+                        <td class="font-medium text-gray-900">{{ employee.name }}</td>
+                        <td>{{ employee.department.name if employee.department else 'N/A' }}</td>
+                        <td>
+                            <select name="employee_{{ employee.employee_id }}_status" class="form-input py-2 text-sm">
+                                <option value="Present" {% if existing and existing.status == 'Present' %}selected{% endif %}>Present</option>
+                                <option value="Absent" {% if existing and existing.status == 'Absent' %}selected{% endif %}>Absent</option>
+                                <option value="Late" {% if existing and existing.status == 'Late' %}selected{% endif %}>Late</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" 
+                                   name="employee_{{ employee.employee_id }}_notes" 
+                                   value="{{ existing.notes if existing else '' }}"
+                                   placeholder="Optional notes..."
+                                   class="form-input py-2 text-sm">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="p-6 border-t bg-gray-50">
+            <button type="submit" class="btn btn-primary">Save Attendance</button>
+        </div>
+        {% else %}
+        <div class="p-12 text-center">
+            <p class="text-gray-500">No active employees found.</p>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% else %}
+<!-- Employee View (Read-only) -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    {% if employees %}
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                {% set existing = attendance_map.get(employee.employee_id) %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ employee.name }}</td>
+                    <td>{{ employee.department.name if employee.department else 'N/A' }}</td>
+                    <td>
+                        {% if existing %}
+                            <span class="status-badge status-{{ existing.status.lower() }}">
+                                {{ existing.status }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400 text-sm">Not marked</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-sm text-gray-600">{{ existing.notes if existing else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <p class="text-gray-500">No attendance records found.</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
