@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Request Leave{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">Request Leave</h1>
+    <p class="text-gray-600 mt-1">Submit a new leave request</p>
+</div>
+
+<div class="max-w-2xl bg-white rounded-lg shadow p-8">
+    <form method="POST" action="{{ url_for('add_leave_request') }}" class="space-y-6">
+        <div>
+            <label for="leave_type" class="form-label">
+                Leave Type <span class="text-red-500">*</span>
+            </label>
+            <select id="leave_type" name="leave_type" required class="form-input">
+                <option value="">Select Leave Type</option>
+                <option value="Annual">Annual Leave</option>
+                <option value="Sick">Sick Leave</option>
+                <option value="Personal">Personal Leave</option>
+            </select>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="start_date" class="form-label">
+                    Start Date <span class="text-red-500">*</span>
+                </label>
+                <input type="date" 
+                       id="start_date" 
+                       name="start_date" 
+                       required 
+                       class="form-input">
+            </div>
+            
+            <div>
+                <label for="end_date" class="form-label">
+                    End Date <span class="text-red-500">*</span>
+                </label>
+                <input type="date" 
+                       id="end_date" 
+                       name="end_date" 
+                       required 
+                       class="form-input">
+            </div>
+        </div>
+        
+        <div>
+            <label for="reason" class="form-label">Reason</label>
+            <textarea id="reason" 
+                     name="reason" 
+                     rows="4" 
+                     class="form-input"
+                     placeholder="Please provide a reason for your leave request..."></textarea>
+        </div>
+        
+        <div class="flex gap-3 justify-end border-t pt-6">
+            <a href="{{ url_for('leave_requests') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

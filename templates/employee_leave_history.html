@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}My Leave History{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">My Leave History</h1>
+    <div class="flex gap-3 mt-4">
+        <a href="{{ url_for('request_leave') }}" class="btn btn-primary">Request Leave</a>
+        <a href="{{ url_for('employee_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold text-gray-900">All Leave Requests</h2>
+    </div>
+    
+    {% if leave_requests %}
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Leave Type</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Days</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for leave in leave_requests %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ leave.leave_type }}</td>
+                    <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                    <td class="text-center">{{ leave.calculate_days() }}</td>
+                    <td class="text-sm text-gray-600">{{ leave.reason[:50] }}{% if leave.reason|length > 50 %}...{% endif %}</td>
+                    <td>
+                        <span class="badge 
+                            {% if leave.status == 'Approved' %}bg-green-100 text-green-800
+                            {% elif leave.status == 'Rejected' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ leave.status }}
+                        </span>
+                    </td>
+                    <td class="text-sm text-gray-600">{{ leave.submitted_at.strftime('%Y-%m-%d %H:%M') if leave.submitted_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-500">
+        <p>No leave requests yet.</p>
+        <a href="{{ url_for('request_leave') }}" class="text-blue-600 hover:text-blue-800 font-medium">Create your first leave request</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

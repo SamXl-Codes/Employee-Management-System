@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Requests{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-semibold text-gray-900">Leave Requests</h1>
+            <p class="text-gray-600 mt-1">Manage employee leave applications</p>
+        </div>
+        <a href="{{ url_for('add_leave_request') }}" class="btn btn-primary">
+            + Request Leave
+        </a>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="bg-white rounded-lg shadow mb-6">
+    <div class="border-b border-gray-200">
+        <nav class="flex -mb-px">
+            <a href="{{ url_for('leave_requests') }}" 
+               class="py-4 px-6 text-sm font-medium {% if not status_filter %}border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+                All Requests
+            </a>
+            <a href="{{ url_for('leave_requests', status='Pending') }}" 
+               class="py-4 px-6 text-sm font-medium {% if status_filter == 'Pending' %}border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+                Pending
+            </a>
+            <a href="{{ url_for('leave_requests', status='Approved') }}" 
+               class="py-4 px-6 text-sm font-medium {% if status_filter == 'Approved' %}border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+                Approved
+            </a>
+            <a href="{{ url_for('leave_requests', status='Rejected') }}" 
+               class="py-4 px-6 text-sm font-medium {% if status_filter == 'Rejected' %}border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+                Rejected
+            </a>
+        </nav>
+    </div>
+</div>
+
+<!-- Leave Requests List -->
+<div class="space-y-4">
+    {% if leaves %}
+        {% for leave in leaves %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <h3 class="text-lg font-semibold text-gray-900">{{ leave.employee.name }}</h3>
+                        <span class="status-badge status-{{ leave.status.lower() }}">{{ leave.status }}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                        <div>
+                            <p class="text-sm text-gray-500">Leave Type</p>
+                            <p class="font-medium text-gray-900">{{ leave.leave_type }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Duration</p>
+                            <p class="font-medium text-gray-900">
+                                {{ leave.start_date.strftime('%b %d') }} - {{ leave.end_date.strftime('%b %d, %Y') }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Days</p>
+                            <p class="font-medium text-gray-900">{{ leave.calculate_days() }} day(s)</p>
+                        </div>
+                    </div>
+                    
+                    {% if leave.reason %}
+                    <div class="mb-3">
+                        <p class="text-sm text-gray-500">Reason</p>
+                        <p class="text-sm text-gray-700">{{ leave.reason }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="text-xs text-gray-500">
+                        <span>Submitted: {{ leave.submitted_at.strftime('%b %d, %Y at %I:%M %p') if leave.submitted_at else 'N/A' }}</span>
+                        {% if leave.reviewed_at %}
+                        <span class="ml-4">Reviewed: {{ leave.reviewed_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if user_role == 'admin' and leave.is_pending() %}
+                <div class="flex gap-2 ml-4">
+                    <form method="POST" action="{{ url_for('update_leave_request', leave_id=leave.leave_id) }}" class="inline">
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="btn btn-success">Approve</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('update_leave_request', leave_id=leave.leave_id) }}" class="inline">
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-12 text-center">
+        <p class="text-gray-500">
+            {% if status_filter %}
+                No {{ status_filter.lower() }} leave requests found.
+            {% else %}
+                No leave requests found.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
