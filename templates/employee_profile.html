@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">My Profile</h1>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+                <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900">{{ current_user.name }}</h2>
+                <p class="text-gray-600">{{ current_user.role.title if current_user.role else 'N/A' }}</p>
+            </div>
+        </div>
+        
+        <div class="px-6 py-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <p class="mt-2 text-gray-900">{{ current_user.email }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Phone</label>
+                    <p class="mt-2 text-gray-900">{{ current_user.phone }}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Department</label>
+                    <p class="mt-2 text-gray-900">{{ current_user.department.name if current_user.department else 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Role</label>
+                    <p class="mt-2 text-gray-900">{{ current_user.role.title if current_user.role else 'N/A' }}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Hire Date</label>
+                    <p class="mt-2 text-gray-900">{{ current_user.hire_date.strftime('%b %d, %Y') if current_user.hire_date else 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Annual Salary</label>
+                    <p class="mt-2 text-gray-900">${{ "{:,.2f}".format(current_user.salary) if current_user.salary else 'N/A' }}</p>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Status</label>
+                <p class="mt-2">
+                    <span class="inline-block px-3 py-1 rounded-full text-sm font-medium 
+                        {% if current_user.status == 'active' %}bg-green-100 text-green-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ current_user.status|title }}
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

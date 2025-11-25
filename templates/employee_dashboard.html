@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">My Dashboard</h1>
+    <p class="text-gray-600 mt-1">Welcome back, {{ current_user.name }}</p>
+</div>
+
+<!-- Quick Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Attendance Rate</h3>
+        <p class="text-3xl font-bold text-blue-600 mt-2">{{ attendance_rate }}%</p>
+        <p class="text-xs text-gray-500 mt-2">Last 30 days</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Pending Requests</h3>
+        <p class="text-3xl font-bold text-yellow-600 mt-2">{{ pending_leaves }}</p>
+        <p class="text-xs text-gray-500 mt-2">Awaiting approval</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Approved Leaves</h3>
+        <p class="text-3xl font-bold text-green-600 mt-2">{{ approved_leaves }}</p>
+        <p class="text-xs text-gray-500 mt-2">This year</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500">Department</h3>
+        <p class="text-lg font-semibold text-gray-900 mt-2">{{ current_user.department.name if current_user.department else 'N/A' }}</p>
+        <p class="text-xs text-gray-500 mt-2">{{ current_user.role.title if current_user.role else 'N/A' }}</p>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b">
+                <h2 class="text-lg font-semibold text-gray-900">Recent Leave Requests</h2>
+            </div>
+            <div class="divide-y">
+                {% if recent_leaves %}
+                    {% for leave in recent_leaves[:5] %}
+                    <div class="px-6 py-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium text-gray-900">{{ leave.leave_type }}</p>
+                                <p class="text-sm text-gray-600">{{ leave.start_date.strftime('%b %d') }} - {{ leave.end_date.strftime('%b %d, %Y') }}</p>
+                            </div>
+                            <span class="badge 
+                                {% if leave.status == 'Approved' %}bg-green-100 text-green-800
+                                {% elif leave.status == 'Rejected' %}bg-red-100 text-red-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ leave.status }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="px-6 py-8 text-center text-gray-500">
+                        No leave requests yet
+                    </div>
+                {% endif %}
+            </div>
+            <div class="px-6 py-4 bg-gray-50">
+                <a href="{{ url_for('my_leave_history') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View all requests →</a>
+            </div>
+        </div>
+    </div>
+    
+    <div>
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b">
+                <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+            </div>
+            <div class="divide-y">
+                <a href="{{ url_for('request_leave') }}" class="block px-6 py-3 hover:bg-gray-50 text-gray-700 font-medium">
+                    Request Leave
+                </a>
+                <a href="{{ url_for('my_profile') }}" class="block px-6 py-3 hover:bg-gray-50 text-gray-700 font-medium">
+                    View Profile
+                </a>
+                <a href="{{ url_for('my_attendance') }}" class="block px-6 py-3 hover:bg-gray-50 text-gray-700 font-medium">
+                    Check Attendance
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
