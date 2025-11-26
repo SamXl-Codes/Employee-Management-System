@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Import Employees{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">Bulk Import Employees</h1>
+    <p class="text-gray-600 mt-1">Upload a CSV file to import multiple employees at once</p>
+</div>
+
+<!-- Upload Form -->
+<div class="max-w-3xl bg-white rounded-lg shadow p-8 mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">Upload CSV File</h2>
+    
+    <form method="POST" action="{{ url_for('import_employees') }}" enctype="multipart/form-data" class="space-y-6">
+        <div>
+            <label for="csv_file" class="form-label">
+                Select CSV File <span class="text-red-500">*</span>
+            </label>
+            <input type="file" 
+                   id="csv_file" 
+                   name="csv_file" 
+                   accept=".csv"
+                   required 
+                   class="form-input">
+            <p class="text-sm text-gray-500 mt-2">
+                File must be in CSV format with the required columns (see template below)
+            </p>
+        </div>
+        
+        <div class="flex gap-3">
+            <a href="{{ url_for('employees') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Upload and Import</button>
+        </div>
+    </form>
+</div>
+
+<!-- CSV Template Information -->
+<div class="max-w-3xl bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+    <h3 class="text-lg font-semibold text-blue-900 mb-3">CSV File Format</h3>
+    <p class="text-sm text-blue-800 mb-4">Your CSV file must include the following columns in this order:</p>
+    
+    <div class="bg-white rounded p-4 font-mono text-sm mb-4">
+        <div class="text-gray-700">name,email,phone,department,role,salary,date_joined</div>
+    </div>
+    
+    <h4 class="font-semibold text-blue-900 mb-2">Column Descriptions:</h4>
+    <ul class="text-sm text-blue-800 space-y-1 mb-4">
+        <li><strong>name:</strong> Employee full name (required)</li>
+        <li><strong>email:</strong> Unique email address (required, valid format)</li>
+        <li><strong>phone:</strong> Phone number (optional, but recommended)</li>
+        <li><strong>department:</strong> Department name - must match existing department (required)</li>
+        <li><strong>role:</strong> Job role title - must match existing role (required)</li>
+        <li><strong>salary:</strong> Annual salary in dollars (required, numeric)</li>
+        <li><strong>date_joined:</strong> Join date in YYYY-MM-DD format (required)</li>
+    </ul>
+    
+    <a href="{{ url_for('download_import_template') }}" class="btn btn-primary">
+        Download CSV Template
+    </a>
+</div>
+
+<!-- Example Data -->
+<div class="max-w-3xl bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-3">Example CSV Data</h3>
+    <div class="overflow-x-auto">
+        <pre class="bg-gray-50 p-4 rounded text-xs font-mono">name,email,phone,department,role,salary,date_joined
+Jane Doe,jane.doe@company.com,555-1234,Engineering,Software Engineer,75000,2024-01-15
+Bob Smith,bob.smith@company.com,555-5678,Sales,Sales Executive,65000,2024-02-01
+Alice Johnson,alice.j@company.com,555-9999,Marketing,Marketing Specialist,68000,2024-03-10</pre>
+    </div>
+</div>
+
+{% if import_results %}
+<!-- Import Results -->
+<div class="max-w-3xl mt-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Import Results</h3>
+        
+        <div class="mb-4">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-2xl font-bold text-green-600">{{ import_results.success_count }}</span>
+                <span class="text-gray-600">employees imported successfully</span>
+            </div>
+            {% if import_results.error_count > 0 %}
+            <div class="flex items-center gap-3">
+                <span class="text-2xl font-bold text-red-600">{{ import_results.error_count }}</span>
+                <span class="text-gray-600">errors encountered</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if import_results.errors %}
+        <div class="border-t pt-4">
+            <h4 class="font-semibold text-gray-900 mb-2">Errors:</h4>
+            <ul class="space-y-2">
+                {% for error in import_results.errors %}
+                <li class="text-sm text-red-600">
+                    <strong>Row {{ error.row }}:</strong> {{ error.message }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div class="mt-6">
+            <a href="{{ url_for('employees') }}" class="btn btn-primary">View Employees</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

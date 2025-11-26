@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-semibold text-gray-900">Audit Trail</h1>
+    <p class="text-gray-600 mt-1">Track all system activities and changes</p>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+    <form method="GET" action="{{ url_for('audit_logs') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div>
+            <label class="form-label">Action</label>
+            <select name="action" class="form-input">
+                <option value="">All Actions</option>
+                <option value="CREATE" {% if action_filter == 'CREATE' %}selected{% endif %}>CREATE</option>
+                <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
+                <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
+                <option value="APPROVE" {% if action_filter == 'APPROVE' %}selected{% endif %}>APPROVE</option>
+                <option value="REJECT" {% if action_filter == 'REJECT' %}selected{% endif %}>REJECT</option>
+            </select>
+        </div>
+        
+        <div>
+            <label class="form-label">Entity Type</label>
+            <select name="entity_type" class="form-input">
+                <option value="">All Entities</option>
+                <option value="Employee" {% if entity_filter == 'Employee' %}selected{% endif %}>Employee</option>
+                <option value="LeaveRequest" {% if entity_filter == 'LeaveRequest' %}selected{% endif %}>Leave Request</option>
+                <option value="Attendance" {% if entity_filter == 'Attendance' %}selected{% endif %}>Attendance</option>
+                <option value="Department" {% if entity_filter == 'Department' %}selected{% endif %}>Department</option>
+            </select>
+        </div>
+        
+        <div>
+            <label class="form-label">Start Date</label>
+            <input type="date" name="start_date" value="{{ start_date or '' }}" class="form-input">
+        </div>
+        
+        <div>
+            <label class="form-label">End Date</label>
+            <input type="date" name="end_date" value="{{ end_date or '' }}" class="form-input">
+        </div>
+        
+        <div class="flex items-end">
+            <button type="submit" class="btn btn-primary w-full">Filter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Audit Logs Table -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold text-gray-900">Activity Log</h2>
+        <p class="text-sm text-gray-600 mt-1">{{ audit_logs|length }} records</p>
+    </div>
+    
+    {% if audit_logs %}
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity Type</th>
+                    <th>Entity ID</th>
+                    <th>Description</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in audit_logs %}
+                <tr>
+                    <td class="text-sm text-gray-600">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}</td>
+                    <td class="font-medium">
+                        {% if log.user %}{{ log.user.username }}{% else %}Unknown{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge 
+                            {% if log.action == 'CREATE' %}bg-green-100 text-green-800
+                            {% elif log.action == 'DELETE' %}bg-red-100 text-red-800
+                            {% elif log.action in ['APPROVE', 'REJECT'] %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td class="text-sm text-gray-600">{{ log.entity_type }}</td>
+                    <td class="text-sm text-gray-600">{{ log.entity_id or '-' }}</td>
+                    <td class="text-sm text-gray-600">{{ log.description or '-' }}</td>
+                    <td class="text-sm text-gray-500">{{ log.ip_address or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-500">
+        No audit logs found for the selected filters.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Pagination Info -->
+<div class="mt-4 text-sm text-gray-600 text-right">
+    Showing most recent 500 records
+</div>
+{% endblock %}
