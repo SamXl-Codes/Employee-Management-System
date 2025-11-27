@@ -22,6 +22,11 @@ from functools import wraps
 import csv
 import json
 import io
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 
 
 # ==================== EMAIL NOTIFICATIONS ====================
@@ -125,8 +130,15 @@ def admin_required(f):
 @app.route('/')
 def index():
     """Redirect to login or dashboard based on authentication."""
+    # Always check if session is valid and user exists
     if 'user_id' in session:
-        return redirect(url_for('dashboard'))
+        user = User.query.get(session['user_id'])
+        if user:
+            return redirect(url_for('dashboard'))
+        else:
+            # Invalid session, clear it
+            session.clear()
+    
     return redirect(url_for('login'))
 
 
@@ -138,8 +150,12 @@ def login():
     Week 2 Concept: if/elif/else for request method handling
     Week 9 Concept: Secure coding - password hashing
     """
-    # If already logged in, redirect to dashboard
-    if 'user_id' in session:
+    # Clear any existing session data before processing login
+    if request.method == 'POST':
+        session.clear()
+    
+    # If already logged in (GET request), redirect to dashboard
+    if 'user_id' in session and request.method == 'GET':
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
@@ -175,11 +191,17 @@ def logout():
     """Handle user logout."""
     username = session.get('username', 'User')
     
-    # Clear session (Week 9: secure session management)
+    # Clear session completely (Week 9: secure session management)
     session.clear()
     
+    # Create response with cache control headers to prevent back button issues
+    response = make_response(redirect(url_for('login')))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
     flash(f'Goodbye, {username}!', 'info')
-    return redirect(url_for('login'))
+    return response
 
 
 # ==================== DASHBOARD ====================
@@ -189,16 +211,20 @@ def logout():
 def dashboard():
     """
     Display dashboard with statistics and recent activity.
+    Redirect employees to their personalized dashboard.
     
     Week 5 Concept: Dictionaries to pass data to templates
+    Week 2 Concept: if/else for role-based routing
     """
-    # Get dashboard statistics
+    # Redirect employees to their personalized dashboard
+    if session.get('role') == 'employee':
+        return redirect(url_for('employee_dashboard'))
+    
+    # Admin dashboard - Get dashboard statistics
     stats = repo.get_dashboard_stats()
     
     # Get pending leave requests (for admin view)
-    pending_leaves = []
-    if session.get('role') == 'admin':
-        pending_leaves = repo.get_all_leave_requests(status='Pending')[:5]  # Latest 5
+    pending_leaves = repo.get_all_leave_requests(status='Pending')[:5]  # Latest 5
     
     return render_template('dashboard.html', 
                          stats=stats, 
@@ -211,9 +237,11 @@ def dashboard():
 
 @app.route('/employees')
 @login_required
+@admin_required
 def employees():
     """
     Display all employees with search capability.
+    ADMIN ONLY - Employees cannot view other employees' data.
     
     Week 2 Concept: for loops to iterate over results
     Week 5 Concept: Lists to store and display data
@@ -295,8 +323,30 @@ def add_employee():
             date_joined=date_joined
         )
         
-        if success:
-            flash(message, 'success')
+        if success and employee:
+            # Automatically create user account for the new employee
+            try:
+                default_password = 'WorkFlow@2025'
+                existing_user = User.query.filter_by(username=email).first()
+                
+                if not existing_user:
+                    new_user = User(
+                        username=email,
+                        password=default_password,
+                        role='employee'
+                    )
+                    db.session.add(new_user)
+                    db.session.commit()
+                    flash(f'{message} ✅ Login account created! Username: {email}, Default Password: {default_password}', 'success')
+                    print(f"✅ Created User account for: {email} with default password: {default_password}")  # Debug log
+                else:
+                    flash(f'{message} (Login account already exists)', 'success')
+                    print(f"⚠️ User account already exists for: {email}")  # Debug log
+            except Exception as e:
+                print(f"❌ Error creating user account: {str(e)}")  # Debug log
+                db.session.rollback()
+                flash(f'{message} ⚠️ Warning: Could not create login account. Contact IT Support.', 'warning')
+            
             return redirect(url_for('employees'))
         else:
             flash(message, 'danger')
@@ -1019,6 +1069,264 @@ def export_leave_summary_csv():
     return response
 
 
+@app.route('/export/employees/pdf')
+@admin_required
+def export_employees_pdf():
+    """Export employees to PDF with formatted table."""
+    employees = repo.get_all_employees(include_inactive=True)
+    
+    # Create PDF in memory
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=18)
+    
+    # Container for PDF elements
+    elements = []
+    
+    # Add title
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#1f2937'),
+        spaceAfter=30,
+        alignment=1  # Center
+    )
+    title = Paragraph(f"Employee Report - {date.today().strftime('%B %d, %Y')}", title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 0.2 * inch))
+    
+    # Prepare table data
+    data = [['ID', 'Name', 'Email', 'Department', 'Role', 'Salary', 'Status']]
+    
+    for emp in employees:
+        data.append([
+            str(emp.employee_id),
+            emp.name,
+            emp.email,
+            emp.department.name if emp.department else 'N/A',
+            emp.role.title if emp.role else 'N/A',
+            f"${emp.salary:,.2f}" if emp.salary else '$0.00',
+            emp.status
+        ])
+    
+    # Create table
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#374151')),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+    ]))
+    
+    elements.append(table)
+    
+    # Add footer
+    elements.append(Spacer(1, 0.3 * inch))
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=colors.grey,
+        alignment=1
+    )
+    footer = Paragraph("© 2025 WorkFlowX. All rights reserved.", footer_style)
+    elements.append(footer)
+    
+    # Build PDF
+    doc.build(elements)
+    
+    # Get PDF from buffer
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=employees_{date.today()}.pdf'
+    
+    return response
+
+
+@app.route('/export/attendance-summary/pdf')
+@admin_required
+def export_attendance_summary_pdf():
+    """Export attendance summary report to PDF."""
+    # Get filtered data
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    department_id = request.args.get('department_id')
+    
+    start_date = utils.parse_date(start_date_str) if start_date_str else None
+    end_date = utils.parse_date(end_date_str) if end_date_str else None
+    
+    employees = repo.get_all_employees()
+    if department_id:
+        employees = [e for e in employees if e.department_id == int(department_id)]
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=18)
+    elements = []
+    
+    # Title
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=20, 
+                                 textColor=colors.HexColor('#1f2937'), spaceAfter=20, alignment=1)
+    title = Paragraph(f"Attendance Summary Report - {date.today().strftime('%B %d, %Y')}", title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 0.2 * inch))
+    
+    # Table data
+    data = [['Employee', 'Department', 'Total Days', 'Present', 'Absent', 'Late', 'Attendance %']]
+    
+    for emp in employees:
+        attendance_records = emp.attendance_records
+        if start_date and end_date:
+            attendance_records = [a for a in attendance_records if start_date <= a.date <= end_date]
+        
+        total_days = len(attendance_records)
+        present = len([a for a in attendance_records if a.status == 'Present'])
+        absent = len([a for a in attendance_records if a.status == 'Absent'])
+        late = len([a for a in attendance_records if a.status == 'Late'])
+        percentage = (present / total_days * 100) if total_days > 0 else 0
+        
+        data.append([
+            emp.name,
+            emp.department.name if emp.department else 'N/A',
+            str(total_days),
+            str(present),
+            str(absent),
+            str(late),
+            f"{percentage:.1f}%"
+        ])
+    
+    # Create table
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#374151')),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+    ]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 0.3 * inch))
+    footer = Paragraph("© 2025 WorkFlowX. All rights reserved.", 
+                      ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=1))
+    elements.append(footer)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=attendance_summary_{date.today()}.pdf'
+    
+    return response
+
+
+@app.route('/export/leave-summary/pdf')
+@admin_required
+def export_leave_summary_pdf():
+    """Export leave summary report to PDF."""
+    # Get filtered data
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    department_id = request.args.get('department_id')
+    
+    start_date = utils.parse_date(start_date_str) if start_date_str else None
+    end_date = utils.parse_date(end_date_str) if end_date_str else None
+    
+    employees = repo.get_all_employees()
+    if department_id:
+        employees = [e for e in employees if e.department_id == int(department_id)]
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=18)
+    elements = []
+    
+    # Title
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=20, 
+                                 textColor=colors.HexColor('#1f2937'), spaceAfter=20, alignment=1)
+    title = Paragraph(f"Leave Summary Report - {date.today().strftime('%B %d, %Y')}", title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 0.2 * inch))
+    
+    # Table data
+    data = [['Employee', 'Department', 'Total Requests', 'Approved', 'Pending', 'Rejected', 'Total Days']]
+    
+    for emp in employees:
+        leave_requests = emp.leave_requests.all()
+        if start_date and end_date:
+            leave_requests = [lr for lr in leave_requests if start_date <= lr.start_date <= end_date]
+        
+        total_requests = len(leave_requests)
+        approved = len([lr for lr in leave_requests if lr.status == 'Approved'])
+        pending = len([lr for lr in leave_requests if lr.status == 'Pending'])
+        rejected = len([lr for lr in leave_requests if lr.status == 'Rejected'])
+        total_days = sum([lr.calculate_days() for lr in leave_requests])
+        
+        data.append([
+            emp.name,
+            emp.department.name if emp.department else 'N/A',
+            str(total_requests),
+            str(approved),
+            str(pending),
+            str(rejected),
+            str(total_days)
+        ])
+    
+    # Create table
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#374151')),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+    ]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 0.3 * inch))
+    footer = Paragraph("© 2025 WorkFlowX. All rights reserved.", 
+                      ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=1))
+    elements.append(footer)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=leave_summary_{date.today()}.pdf'
+    
+    return response
+
+
 # ==================== REST API ENDPOINT ====================
 
 @app.route('/api/employees', methods=['GET'])
@@ -1325,22 +1633,41 @@ def audit_logs():
 @app.route('/employee/dashboard')
 @login_required
 def employee_dashboard():
-    """Employee personal dashboard with stats."""
+    """
+    Employee personal dashboard with personalized stats.
+    Shows only information relevant to the logged-in employee.
+    """
     user = repo.get_user_by_id(session['user_id'])
-    emp = Employee.query.filter_by(email=user.username + '@company.com').first()
     
+    # Try to find employee by email matching username
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    # If not found, try with @company.com or @workflowx.com
     if not emp:
-        emp = Employee.query.first()
+        emp = Employee.query.filter(
+            (Employee.email == user.username + '@company.com') |
+            (Employee.email == user.username + '@workflowx.com') |
+            (Employee.email.like(f'%{user.username}%'))
+        ).first()
+    
+    # If still not found, show error message
+    if not emp:
+        flash('Your employee profile is not linked to this account. Please contact HR.', 'danger')
+        return redirect(url_for('logout'))
     
     # Calculate attendance rate (last 30 days)
     from datetime import timedelta
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    today = datetime.utcnow().date()
+    
     recent_attendance = Attendance.query.filter(
         Attendance.employee_id == emp.employee_id,
         Attendance.date >= thirty_days_ago
     ).all()
     
     present_count = len([a for a in recent_attendance if a.status == 'Present'])
+    late_count = len([a for a in recent_attendance if a.status == 'Late'])
+    absent_count = len([a for a in recent_attendance if a.status == 'Absent'])
     attendance_rate = round((present_count / len(recent_attendance) * 100), 1) if recent_attendance else 0
     
     # Get leave statistics
@@ -1354,16 +1681,39 @@ def employee_dashboard():
         status='Approved'
     ).count()
     
+    rejected_leaves = LeaveRequest.query.filter_by(
+        employee_id=emp.employee_id,
+        status='Rejected'
+    ).count()
+    
+    # Get recent leave requests (last 5)
     recent_leaves = LeaveRequest.query.filter_by(
         employee_id=emp.employee_id
-    ).order_by(LeaveRequest.submitted_at.desc()).all()
+    ).order_by(LeaveRequest.submitted_at.desc()).limit(5).all()
+    
+    # Calculate days since joining
+    days_employed = (today - emp.date_joined).days if emp.date_joined else 0
+    years_employed = round(days_employed / 365.25, 1)
+    
+    # Get today's attendance status
+    today_attendance = Attendance.query.filter_by(
+        employee_id=emp.employee_id,
+        date=today
+    ).first()
     
     return render_template('employee_dashboard.html',
                          current_user=emp,
                          attendance_rate=attendance_rate,
+                         present_count=present_count,
+                         late_count=late_count,
+                         absent_count=absent_count,
                          pending_leaves=pending_leaves,
                          approved_leaves=approved_leaves,
-                         recent_leaves=recent_leaves)
+                         rejected_leaves=rejected_leaves,
+                         recent_leaves=recent_leaves,
+                         years_employed=years_employed,
+                         today_attendance=today_attendance,
+                         user_role=session.get('role'))
 
 
 @app.route('/employee/profile')

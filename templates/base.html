@@ -41,36 +41,53 @@
                 
                 <!-- Navigation Links -->
                 <div class="hidden md:flex items-center space-x-1">
-                    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                        Dashboard
-                    </a>
-                    <a href="{{ url_for('employees') }}" class="nav-link {% if 'employee' in request.endpoint %}active{% endif %}">
-                        Employees
-                    </a>
-                    <a href="{{ url_for('departments') }}" class="nav-link {% if 'department' in request.endpoint %}active{% endif %}">
-                        Departments
-                    </a>
-                    <a href="{{ url_for('roles') }}" class="nav-link {% if 'role' in request.endpoint and 'employee' not in request.endpoint %}active{% endif %}">
-                        Roles
-                    </a>
-                    <a href="{{ url_for('attendance') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}">
-                        Attendance
-                    </a>
-                    <a href="{{ url_for('leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}">
-                        Leave Requests
-                    </a>
-                    <a href="{{ url_for('reports') }}" class="nav-link {% if 'report' in request.endpoint or 'export' in request.endpoint %}active{% endif %}">
-                        Reports
-                    </a>
+                    {% if session.role == 'admin' %}
+                        <!-- Admin Navigation -->
+                        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                            Dashboard
+                        </a>
+                        <a href="{{ url_for('employees') }}" class="nav-link {% if 'employee' in request.endpoint and 'employee_dashboard' not in request.endpoint %}active{% endif %}">
+                            Employees
+                        </a>
+                        <a href="{{ url_for('departments') }}" class="nav-link {% if 'department' in request.endpoint %}active{% endif %}">
+                            Departments
+                        </a>
+                        <a href="{{ url_for('roles') }}" class="nav-link {% if 'role' in request.endpoint and 'employee' not in request.endpoint %}active{% endif %}">
+                            Roles
+                        </a>
+                        <a href="{{ url_for('attendance') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}">
+                            Attendance
+                        </a>
+                        <a href="{{ url_for('leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint and 'my_leave' not in request.endpoint %}active{% endif %}">
+                            Leave Requests
+                        </a>
+                        <a href="{{ url_for('reports') }}" class="nav-link {% if 'report' in request.endpoint or 'export' in request.endpoint %}active{% endif %}">
+                            Reports
+                        </a>
+                    {% else %}
+                        <!-- Employee Navigation -->
+                        <a href="{{ url_for('employee_dashboard') }}" class="nav-link {% if 'employee_dashboard' in request.endpoint %}active{% endif %}">
+                            My Dashboard
+                        </a>
+                        <a href="{{ url_for('my_profile') }}" class="nav-link {% if 'my_profile' in request.endpoint %}active{% endif %}">
+                            My Profile
+                        </a>
+                        <a href="{{ url_for('my_attendance') }}" class="nav-link {% if 'my_attendance' in request.endpoint %}active{% endif %}">
+                            My Attendance
+                        </a>
+                        <a href="{{ url_for('my_leave_history') }}" class="nav-link {% if 'my_leave' in request.endpoint %}active{% endif %}">
+                            My Leaves
+                        </a>
+                        <a href="{{ url_for('add_leave_request') }}" class="nav-link {% if 'add_leave' in request.endpoint %}active{% endif %}">
+                            Request Leave
+                        </a>
+                    {% endif %}
                 </div>
                 
                 <!-- User Menu -->
                 <div class="flex items-center space-x-4">
                     <span class="text-sm text-gray-700">
                         <span class="font-medium">{{ session.username }}</span>
-                        {% if session.role == 'admin' %}
-                            <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Admin</span>
-                        {% endif %}
                     </span>
                     <a href="{{ url_for('logout') }}" class="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md hover:bg-gray-100">
                         Logout
@@ -106,9 +123,14 @@
     {% if session.user_id %}
     <footer class="bg-white border-t border-gray-200 mt-12">
         <div class="max-w-7xl mx-auto px-4 lg:px-8 py-6">
-            <p class="text-center text-sm text-gray-500">
-                &copy; 2024 WorkFlowX - Employee Management System | Built with Flask & PostgreSQL
-            </p>
+            <div class="text-center">
+                <p class="text-sm text-gray-600 mb-2">
+                    &copy; 2025 WorkFlowX. All rights reserved.
+                </p>
+                <p class="text-xs text-gray-500">
+                    Developed by Samuel Ogunlusi & George Sherman
+                </p>
+            </div>
         </div>
     </footer>
     {% endif %}

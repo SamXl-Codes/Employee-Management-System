@@ -27,9 +27,14 @@
             </div>
             
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                </label>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="password" class="block text-sm font-medium text-gray-700">
+                        Password
+                    </label>
+                    <a href="#" onclick="alert('Please contact IT Support at itsupport@workflowx.com to reset your password.'); return false;" class="text-xs text-blue-600 hover:text-blue-800">
+                        Forgot Password?
+                    </a>
+                </div>
                 <input type="password" 
                        id="password" 
                        name="password" 
@@ -45,10 +50,31 @@
         </form>
         
         <!-- Demo Credentials -->
-        <div class="mt-6 p-4 bg-gray-50 rounded-md">
-            <p class="text-xs text-gray-600 font-medium mb-2">Demo Credentials:</p>
-            <p class="text-xs text-gray-500">Username: <span class="font-mono font-medium">admin</span></p>
-            <p class="text-xs text-gray-500">Password: <span class="font-mono font-medium">admin123</span></p>
+        <div class="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <p class="text-xs text-gray-700 font-semibold mb-3">Demo Credentials:</p>
+            <div class="space-y-2">
+                <div>
+                    <p class="text-xs text-gray-600 font-medium">Admin:</p>
+                    <p class="text-xs text-gray-500 ml-2">Username: <span class="font-mono font-medium text-blue-600">admin</span></p>
+                    <p class="text-xs text-gray-500 ml-2">Password: <span class="font-mono font-medium text-blue-600">admin123</span></p>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-600 font-medium">Employee (any employee email):</p>
+                    <p class="text-xs text-gray-500 ml-2">Username: <span class="font-mono font-medium text-blue-600">[employee-email]</span></p>
+                    <p class="text-xs text-gray-500 ml-2">Default Password: <span class="font-mono font-medium text-blue-600">WorkFlow@2025</span></p>
+                    <p class="text-xs text-gray-400 ml-2 mt-1 italic">Example: john.smith@workflowx.com</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="mt-6 text-center space-y-1">
+            <p class="text-xs text-gray-600">
+                &copy; 2025 WorkFlowX. All rights reserved.
+            </p>
+            <p class="text-xs text-gray-500">
+                Developed by Samuel Ogunlusi & George Sherman
+            </p>
         </div>
     </div>
 </div>

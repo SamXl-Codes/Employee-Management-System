@@ -95,9 +95,19 @@
     {% endif %}
     
     <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b">
-            <h3 class="text-lg font-semibold text-gray-900">Attendance Summary Report</h3>
-            <p class="text-sm text-gray-600 mt-1">{{ report_data|length }} employees</p>
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Attendance Summary Report</h3>
+                <p class="text-sm text-gray-600 mt-1">{{ report_data|length }} employees</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ url_for('export_attendance_summary_pdf', **request.args) }}" class="btn btn-sm bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                    </svg>
+                    PDF
+                </a>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="data-table">
@@ -145,9 +155,25 @@
     {% endif %}
     
     <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b">
-            <h3 class="text-lg font-semibold text-gray-900">Leave Summary Report</h3>
-            <p class="text-sm text-gray-600 mt-1">{{ report_data|length }} employees</p>
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Leave Summary Report</h3>
+                <p class="text-sm text-gray-600 mt-1">{{ report_data|length }} employees</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ url_for('export_leave_summary_pdf', **request.args) }}" class="btn btn-sm bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                    </svg>
+                    PDF
+                </a>
+                <a href="{{ url_for('export_leave_summary_csv') }}" class="btn btn-sm bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    CSV
+                </a>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="data-table">
@@ -335,9 +361,25 @@
             <h2 class="text-xl font-semibold text-gray-900">Employee Report</h2>
         </div>
         <p class="text-sm text-gray-600 mb-6">Complete list of all employees with their details including department, role, salary, and status.</p>
-        <div class="flex gap-3">
-            <a href="{{ url_for('export_employees_csv') }}" class="btn btn-primary flex-1">Download CSV</a>
-            <a href="{{ url_for('export_employees_json') }}" class="btn btn-secondary flex-1">Download JSON</a>
+        <div class="grid grid-cols-3 gap-2">
+            <a href="{{ url_for('export_employees_pdf') }}" class="btn bg-red-600 hover:bg-red-700 text-white text-sm py-2">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                </svg>
+                PDF
+            </a>
+            <a href="{{ url_for('export_employees_csv') }}" class="btn bg-green-600 hover:bg-green-700 text-white text-sm py-2">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                CSV
+            </a>
+            <a href="{{ url_for('export_employees_json') }}" class="btn bg-purple-600 hover:bg-purple-700 text-white text-sm py-2">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                </svg>
+                JSON
+            </a>
         </div>
     </div>
     
@@ -351,8 +393,19 @@
             <h2 class="text-xl font-semibold text-gray-900">Leave Summary</h2>
         </div>
         <p class="text-sm text-gray-600 mb-6">Summary of leave days used by each employee, including pending and approved requests.</p>
-        <div class="flex gap-3">
-            <a href="{{ url_for('export_leave_summary_csv') }}" class="btn btn-primary flex-1">Download CSV</a>
+        <div class="grid grid-cols-2 gap-2">
+            <a href="{{ url_for('export_leave_summary_pdf') }}" class="btn bg-red-600 hover:bg-red-700 text-white text-sm py-2">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                </svg>
+                PDF
+            </a>
+            <a href="{{ url_for('export_leave_summary_csv') }}" class="btn bg-green-600 hover:bg-green-700 text-white text-sm py-2">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                CSV
+            </a>
         </div>
     </div>
 </div>
@@ -375,4 +428,3 @@
     </div>
 </div>
 {% endmacro %}
-{% endblock %}
