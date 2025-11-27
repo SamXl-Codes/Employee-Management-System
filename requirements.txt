@@ -1,0 +1,20 @@
+# WorkFlowX - Python Dependencies
+# CA-2 Advanced Programming Techniques
+# Team: Samuel Ogunlusi (20086108) & George M. Sherman (20079442)
+
+# Core Framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Database ORM (SQLite - CA-2 Requirement)
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.23
+
+# Validation
+email-validator==2.1.0
+
+# WSGI HTTP Server (for production deployment)
+gunicorn==21.2.0
+
+# NOTE: psycopg2-binary NOT included (PostgreSQL not required for CA-2)
+# CA-2 requires SQLite which is built into Python
