@@ -1,81 +1,756 @@
 {% extends "base.html" %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Login - WorkflowX{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-        <!-- Logo/Header -->
-        <div class="text-center mb-8">
-            <h2 class="text-4xl font-bold text-blue-600 mb-2">WorkFlowX</h2>
-            <p class="text-gray-600">Employee Management System</p>
+<style>
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(2deg); }
+    }
+
+    @keyframes blob {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .login-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #dbeafe 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    [data-theme="dark"] .login-container {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+    }
+
+    /* Animated Background Blobs */
+    .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: 0.3;
+        animation: blob 20s infinite;
+    }
+
+    .blob-1 {
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.4);
+        top: -100px;
+        left: -100px;
+    }
+
+    .blob-2 {
+        width: 400px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.3);
+        bottom: -150px;
+        right: -150px;
+        animation-delay: -5s;
+    }
+
+    .blob-3 {
+        width: 250px;
+        height: 250px;
+        background: rgba(255, 255, 255, 0.35);
+        top: 50%;
+        left: 50%;
+        animation-delay: -10s;
+    }
+
+    .login-box {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        max-width: 1100px;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 30px;
+        overflow: hidden;
+        box-shadow: 
+            0 30px 80px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+        position: relative;
+        z-index: 10;
+        animation: slideUp 0.8s ease-out;
+    }
+
+    [data-theme="dark"] .login-box {
+        background: rgba(15, 23, 42, 0.98);
+        box-shadow: 
+            0 30px 80px rgba(0, 0, 0, 0.5),
+            0 0 0 1px rgba(59, 130, 246, 0.2) inset;
+    }
+
+    /* Left Panel - Branding */
+    .branding-panel {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        padding: 3rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .branding-panel::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .branding-panel::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background-image: 
+            repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.03) 10px, rgba(255,255,255,.03) 20px);
+        pointer-events: none;
+    }
+
+    .brand-header {
+        position: relative;
+        z-index: 1;
+        animation: fadeIn 1s ease-out;
+        width: 100%;
+    }
+
+    .brand-logo-box {
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        animation: float 6s ease-in-out infinite;
+        position: relative;
+    }
+
+    .brand-logo-box::after {
+        content: 'W';
+        position: absolute;
+        font-size: 42px;
+        font-weight: 900;
+        color: white;
+        letter-spacing: 0;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .brand-logo-box svg {
+        width: 42px;
+        height: 42px;
+        color: white;
+        opacity: 0;
+    }
+
+    .brand-title {
+        font-size: 40px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 1rem;
+        letter-spacing: -0.5px;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .brand-subtitle {
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 400;
+        margin-bottom: 2rem;
+        letter-spacing: 0.3px;
+    }
+
+    .brand-description {
+        max-width: 380px;
+        margin: 0 auto;
+        font-size: 14px;
+        line-height: 1.8;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 300;
+    }
+
+    .brand-tagline {
+        display: none;
+    }
+
+    .tagline-text {
+        display: none;
+    }
+
+    .features-grid {
+        position: relative;
+        z-index: 1;
+        animation: slideUp 1.2s ease-out;
+    }
+
+    .feature-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateX(5px);
+    }
+
+    .feature-card-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .feature-icon svg {
+        width: 20px;
+        height: 20px;
+        color: white;
+    }
+
+    .feature-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+    }
+
+    .feature-description {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1.5;
+        padding-left: 3.5rem;
+    }
+
+    .brand-footer {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        gap: 1.5rem;
+        animation: fadeIn 1.5s ease-out;
+    }
+
+    .stat-item {
+        text-align: center;
+        flex: 1;
+    }
+
+    .stat-number {
+        font-size: 24px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.8);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Right Panel - Login Form */
+    .form-panel {
+        background: white;
+        padding: 3rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+    }
+
+    [data-theme="dark"] .form-panel {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+        animation: slideUp 0.8s ease-out;
+    }
+
+    .form-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    [data-theme="dark"] .form-title {
+        color: #f1f5f9;
+    }
+
+    .form-description {
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    [data-theme="dark"] .form-description {
+        color: #94a3b8;
+    }
+
+    .credentials-box {
+        background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+        border: 2px solid #3b82f6;
+        border-radius: 14px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        animation: slideUp 1.2s ease-out;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+
+    [data-theme="dark"] .credentials-box {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        border-color: #60a5fa;
+    }
+
+    .credentials-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    [data-theme="dark"] .credentials-title {
+        color: #93c5fd;
+    }
+
+    .credentials-list {
+        font-size: 13px;
+        color: #1e40af;
+        line-height: 1.8;
+    }
+
+    [data-theme="dark"] .credentials-list {
+        color: #bfdbfe;
+    }
+
+    .credential-item {
+        padding: 0.4rem 0;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    .credential-item:last-child {
+        border-bottom: none;
+    }
+
+    [data-theme="dark"] .credential-item {
+        border-bottom-color: rgba(96, 165, 250, 0.2);
+    }
+
+    .credential-label {
+        font-weight: 600;
+        color: #1e3a8a;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    [data-theme="dark"] .credential-label {
+        color: #93c5fd;
+    }
+
+    .credential-value {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: #2563eb;
+        background: rgba(255, 255, 255, 0.5);
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        display: inline-block;
+        font-size: 12px;
+    }
+
+    [data-theme="dark"] .credential-value {
+        color: #93c5fd;
+        background: rgba(30, 58, 138, 0.5);
+    }
+
+    .credential-example {
+        font-size: 11px;
+        color: #6b7280;
+        font-style: italic;
+        margin-top: 0.25rem;
+    }
+
+    [data-theme="dark"] .credential-example {
+        color: #94a3b8;
+    }
+
+    .login-form {
+        animation: slideUp 1s ease-out;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    [data-theme="dark"] .form-label {
+        color: #e2e8f0;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    [data-theme="dark"] .form-input {
+        background: #0f172a;
+        border-color: #334155;
+        color: #f1f5f9;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-input::placeholder {
+        color: #9ca3af;
+    }
+
+    .form-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .remember-me {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .remember-me input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #3b82f6;
+    }
+
+    .remember-me label {
+        font-size: 14px;
+        color: #6b7280;
+        cursor: pointer;
+    }
+
+    [data-theme="dark"] .remember-me label {
+        color: #94a3b8;
+    }
+
+    .forgot-password {
+        font-size: 14px;
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }
+
+    .forgot-password:hover {
+        color: #2563eb;
+    }
+
+    [data-theme="dark"] .forgot-password {
+        color: #60a5fa;
+    }
+
+    [data-theme="dark"] .forgot-password:hover {
+        color: #93c5fd;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    }
+
+    .btn-login:active {
+        transform: translateY(0);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        font-size: 14px;
+    }
+
+    .alert-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    [data-theme="dark"] .alert-danger {
+        background: #7f1d1d;
+        color: #fecaca;
+        border-color: #991b1b;
+    }
+
+    .support-message {
+        text-align: center;
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+    }
+
+    [data-theme="dark"] .support-message {
+        background: #0f172a;
+        border-color: #1e293b;
+    }
+
+    .support-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+
+    [data-theme="dark"] .support-title {
+        color: #cbd5e1;
+    }
+
+    .support-email {
+        font-size: 13px;
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .support-email:hover {
+        text-decoration: underline;
+    }
+
+    [data-theme="dark"] .support-email {
+        color: #60a5fa;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 1024px) {
+        .login-box {
+            grid-template-columns: 1fr;
+            max-width: 500px;
+        }
+
+        .branding-panel {
+            display: none;
+        }
+
+        .form-panel {
+            padding: 2rem;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .login-container {
+            padding: 1rem;
+        }
+
+        .form-panel {
+            padding: 1.5rem;
+        }
+
+        .form-title {
+            font-size: 24px;
+        }
+    }
+</style>
+
+<div class="login-container">
+    <!-- Animated Background Blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="login-box">
+        <!-- Left Panel - Branding -->
+        <div class="branding-panel">
+            <div class="brand-header">
+                <div class="brand-logo-box">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h1 class="brand-title">WorkflowX</h1>
+                <p class="brand-subtitle">Employee Management System</p>
+                <p class="brand-description">
+                    Streamline your HR operations with our comprehensive platform. Manage employees, track attendance, process leave requests, and generate insightful reports all in one place.
+                </p>
+            </div>
         </div>
-        
-        <!-- Login Form -->
-        <form method="POST" action="{{ url_for('login') }}" class="space-y-6">
-            <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-                    Username
-                </label>
-                <input type="text" 
-                       id="username" 
-                       name="username" 
-                       required 
-                       autofocus
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                       placeholder="Enter your username">
+
+        <!-- Right Panel - Login Form -->
+        <div class="form-panel">
+            <div class="form-header">
+                <h2 class="form-title">Welcome Back</h2>
+                <p class="form-description">Sign in to access your dashboard</p>
             </div>
-            
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <label for="password" class="block text-sm font-medium text-gray-700">
-                        Password
-                    </label>
-                    <a href="#" onclick="alert('Please contact IT Support at itsupport@workflowx.com to reset your password.'); return false;" class="text-xs text-blue-600 hover:text-blue-800">
-                        Forgot Password?
-                    </a>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Demo Credentials Box -->
+            <div class="credentials-box">
+                <div class="credentials-title">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Demo Credentials
                 </div>
-                <input type="password" 
-                       id="password" 
-                       name="password" 
-                       required
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                       placeholder="Enter your password">
-            </div>
-            
-            <button type="submit" 
-                    class="w-full bg-blue-600 text-white py-2.5 px-6 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
-                Login
-            </button>
-        </form>
-        
-        <!-- Demo Credentials -->
-        <div class="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
-            <p class="text-xs text-gray-700 font-semibold mb-3">Demo Credentials:</p>
-            <div class="space-y-2">
-                <div>
-                    <p class="text-xs text-gray-600 font-medium">Admin:</p>
-                    <p class="text-xs text-gray-500 ml-2">Username: <span class="font-mono font-medium text-blue-600">admin</span></p>
-                    <p class="text-xs text-gray-500 ml-2">Password: <span class="font-mono font-medium text-blue-600">admin123</span></p>
-                </div>
-                <div class="mt-2">
-                    <p class="text-xs text-gray-600 font-medium">Employee (any employee email):</p>
-                    <p class="text-xs text-gray-500 ml-2">Username: <span class="font-mono font-medium text-blue-600">[employee-email]</span></p>
-                    <p class="text-xs text-gray-500 ml-2">Default Password: <span class="font-mono font-medium text-blue-600">WorkFlow@2025</span></p>
-                    <p class="text-xs text-gray-400 ml-2 mt-1 italic">Example: john.smith@workflowx.com</p>
+                <div class="credentials-list">
+                    <div class="credential-item">
+                        <div class="credential-label">Admin:</div>
+                        <span class="credential-value">admin / admin123</span>
+                    </div>
+                    <div class="credential-item">
+                        <div class="credential-label">Employee:</div>
+                        <span class="credential-value">[email] / WorkFlow@2025</span>
+                        <div class="credential-example">Example: john.smith@workflowx.com</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Footer -->
-        <div class="mt-6 text-center space-y-1">
-            <p class="text-xs text-gray-600">
-                &copy; 2025 WorkFlowX. All rights reserved.
-            </p>
-            <p class="text-xs text-gray-500">
-                Developed by Samuel Ogunlusi & George Sherman
-            </p>
+
+            <form method="POST" action="{{ url_for('login') }}" class="login-form">
+                <div class="form-group">
+                    <label for="username" class="form-label">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        placeholder="Enter your username" 
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="Enter your password" 
+                        required
+                    >
+                </div>
+
+                <div class="form-footer">
+                    <div class="remember-me">
+                        <input type="checkbox" id="remember" name="remember">
+                        <label for="remember">Remember me</label>
+                    </div>
+                    <a href="#" class="forgot-password">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn-login">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="support-message">
+                <p class="support-title">Need Help?</p>
+                <p style="font-size: 12px; color: #64748b; margin: 0;">
+                    Contact IT Support at <a href="mailto:support@workflowx.com" class="support-email">support@workflowx.com</a>
+                </p>
+            </div>
         </div>
     </div>
 </div>
+
 {% endblock %}

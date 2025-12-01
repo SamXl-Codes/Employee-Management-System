@@ -247,6 +247,7 @@ class Employee(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     phone = db.Column(db.String(20))
+    profile_image = db.Column(db.String(255), default='default-avatar.png')  # Profile image filename
     department_id = db.Column(db.Integer, db.ForeignKey('departments.department_id'), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.role_id'), nullable=False)
     salary = db.Column(db.Numeric(10, 2))  # Decimal for precise currency values
@@ -373,6 +374,8 @@ class Attendance(db.Model):
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.employee_id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), nullable=False)  # 'Present', 'Absent', 'Late'
+    check_in_time = db.Column(db.DateTime)  # Timestamp of check-in
+    check_out_time = db.Column(db.DateTime)  # Timestamp of check-out
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -381,7 +384,7 @@ class Attendance(db.Model):
         db.UniqueConstraint('employee_id', 'date', name='unique_employee_date'),
     )
     
-    def __init__(self, employee_id, date, status, notes=None):
+    def __init__(self, employee_id, date, status, check_in_time=None, check_out_time=None, notes=None):
         """
         Initialize a new Attendance record.
         
@@ -389,12 +392,24 @@ class Attendance(db.Model):
             employee_id: ID of employee
             date: Date of attendance
             status: Attendance status
+            check_in_time: Check-in timestamp
+            check_out_time: Check-out timestamp
             notes: Optional notes
         """
         self.employee_id = employee_id
         self.date = date
         self.status = status
+        self.check_in_time = check_in_time
+        self.check_out_time = check_out_time
         self.notes = notes
+    
+    def calculate_hours_worked(self):
+        """Calculate hours worked based on check-in and check-out times."""
+        if self.check_in_time and self.check_out_time:
+            delta = self.check_out_time - self.check_in_time
+            hours = delta.total_seconds() / 3600
+            return round(hours, 2)
+        return 0
     
     def to_dict(self):
         """Convert to dictionary."""
@@ -561,3 +576,568 @@ class AuditLog(db.Model):
     
     def __repr__(self):
         return f"<AuditLog {self.audit_id}: {self.action} on {self.entity_type}>"
+
+
+# ==================== PAYROLL MANAGEMENT MODELS ====================
+
+class Payroll(db.Model):
+    """
+    Payroll model for managing employee salary payments.
+    
+    Attributes:
+        payroll_id: Primary key
+        employee_id: Foreign key to Employee
+        pay_period_start: Start date of pay period
+        pay_period_end: End date of pay period
+        gross_salary: Base salary before deductions
+        total_deductions: Sum of all deductions
+        net_salary: Final salary after deductions
+        payment_date: Date salary was paid
+        payment_status: Status of payment (pending/paid/failed)
+        payment_method: Method of payment (bank transfer, cash, check)
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'payroll'
+    
+    payroll_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.employee_id'), nullable=False)
+    pay_period_start = db.Column(db.Date, nullable=False)
+    pay_period_end = db.Column(db.Date, nullable=False)
+    gross_salary = db.Column(db.Numeric(10, 2), nullable=False)
+    total_deductions = db.Column(db.Numeric(10, 2), default=0)
+    net_salary = db.Column(db.Numeric(10, 2), nullable=False)
+    payment_date = db.Column(db.Date)
+    payment_status = db.Column(db.String(20), default='pending')  # pending, paid, failed
+    payment_method = db.Column(db.String(50), default='bank_transfer')
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    employee = db.relationship('Employee', backref='payroll_records')
+    deductions = db.relationship('Deduction', backref='payroll', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __init__(self, employee_id, pay_period_start, pay_period_end, gross_salary):
+        self.employee_id = employee_id
+        self.pay_period_start = pay_period_start
+        self.pay_period_end = pay_period_end
+        self.gross_salary = gross_salary
+        self.total_deductions = 0  # Initialize to 0 before calculating
+        self.calculate_net_salary()
+    
+    def calculate_net_salary(self):
+        """Calculate net salary by subtracting deductions from gross salary."""
+        deductions = self.total_deductions if self.total_deductions is not None else 0
+        self.net_salary = float(self.gross_salary) - float(deductions)
+    
+    def add_deduction(self, deduction_amount):
+        """Add a deduction and recalculate net salary."""
+        self.total_deductions = float(self.total_deductions) + deduction_amount
+        self.calculate_net_salary()
+    
+    def mark_as_paid(self, payment_date=None):
+        """Mark payroll as paid."""
+        self.payment_status = 'paid'
+        self.payment_date = payment_date or datetime.now().date()
+    
+    def to_dict(self):
+        return {
+            'payroll_id': self.payroll_id,
+            'employee_id': self.employee_id,
+            'pay_period_start': self.pay_period_start.isoformat() if self.pay_period_start else None,
+            'pay_period_end': self.pay_period_end.isoformat() if self.pay_period_end else None,
+            'gross_salary': float(self.gross_salary),
+            'total_deductions': float(self.total_deductions),
+            'net_salary': float(self.net_salary),
+            'payment_date': self.payment_date.isoformat() if self.payment_date else None,
+            'payment_status': self.payment_status,
+            'payment_method': self.payment_method
+        }
+    
+    def __repr__(self):
+        return f"<Payroll {self.payroll_id}: Employee {self.employee_id} - ${self.net_salary}>"
+
+
+class Deduction(db.Model):
+    """
+    Deduction model for salary deductions (tax, insurance, etc.).
+    
+    Attributes:
+        deduction_id: Primary key
+        payroll_id: Foreign key to Payroll
+        deduction_type: Type of deduction (tax, insurance, loan, etc.)
+        deduction_name: Name/description of deduction
+        amount: Deduction amount
+        percentage: Percentage of gross salary (if applicable)
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'deductions'
+    
+    deduction_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    payroll_id = db.Column(db.Integer, db.ForeignKey('payroll.payroll_id'), nullable=False)
+    deduction_type = db.Column(db.String(50), nullable=False)  # tax, insurance, loan, pension, etc.
+    deduction_name = db.Column(db.String(100), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    percentage = db.Column(db.Numeric(5, 2))  # Optional percentage
+    is_statutory = db.Column(db.Boolean, default=False)  # Required by law
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __init__(self, payroll_id, deduction_type, deduction_name, amount, percentage=None, is_statutory=False):
+        self.payroll_id = payroll_id
+        self.deduction_type = deduction_type
+        self.deduction_name = deduction_name
+        self.amount = amount
+        self.percentage = percentage
+        self.is_statutory = is_statutory
+    
+    def to_dict(self):
+        return {
+            'deduction_id': self.deduction_id,
+            'deduction_type': self.deduction_type,
+            'deduction_name': self.deduction_name,
+            'amount': float(self.amount),
+            'percentage': float(self.percentage) if self.percentage else None,
+            'is_statutory': self.is_statutory
+        }
+    
+    def __repr__(self):
+        return f"<Deduction {self.deduction_id}: {self.deduction_name} - ${self.amount}>"
+
+
+# ==================== PERFORMANCE MANAGEMENT MODELS ====================
+
+class PerformanceReview(db.Model):
+    """
+    Performance review model for employee evaluations.
+    
+    Attributes:
+        review_id: Primary key
+        employee_id: Foreign key to Employee
+        reviewer_id: Foreign key to User (reviewer)
+        review_period_start: Start of review period
+        review_period_end: End of review period
+        overall_rating: Overall performance rating (1-5)
+        strengths: Employee strengths
+        areas_for_improvement: Areas needing improvement
+        goals_met: Were goals achieved
+        comments: Additional comments
+        status: Review status (draft, submitted, completed)
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'performance_reviews'
+    
+    review_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.employee_id'), nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    review_period_start = db.Column(db.Date, nullable=False)
+    review_period_end = db.Column(db.Date, nullable=False)
+    overall_rating = db.Column(db.Integer)  # 1-5 scale
+    strengths = db.Column(db.Text)
+    areas_for_improvement = db.Column(db.Text)
+    goals_met = db.Column(db.Boolean, default=False)
+    comments = db.Column(db.Text)
+    status = db.Column(db.String(20), default='draft')  # draft, submitted, completed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    employee = db.relationship('Employee', backref='performance_reviews')
+    reviewer = db.relationship('User', backref='reviews_given')
+    
+    def __init__(self, employee_id, reviewer_id, review_period_start, review_period_end):
+        self.employee_id = employee_id
+        self.reviewer_id = reviewer_id
+        self.review_period_start = review_period_start
+        self.review_period_end = review_period_end
+    
+    def submit(self):
+        """Submit the review."""
+        self.status = 'submitted'
+        self.updated_at = datetime.utcnow()
+    
+    def complete(self):
+        """Mark review as completed."""
+        self.status = 'completed'
+        self.updated_at = datetime.utcnow()
+    
+    def to_dict(self):
+        return {
+            'review_id': self.review_id,
+            'employee_id': self.employee_id,
+            'reviewer_id': self.reviewer_id,
+            'review_period_start': self.review_period_start.isoformat() if self.review_period_start else None,
+            'review_period_end': self.review_period_end.isoformat() if self.review_period_end else None,
+            'overall_rating': self.overall_rating,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        return f"<PerformanceReview {self.review_id}: Employee {self.employee_id} - Rating {self.overall_rating}>"
+
+
+class Goal(db.Model):
+    """
+    Goal model for employee goal setting and tracking.
+    
+    Attributes:
+        goal_id: Primary key
+        employee_id: Foreign key to Employee
+        goal_title: Title of the goal
+        description: Detailed description
+        target_date: Target completion date
+        status: Goal status (not_started, in_progress, completed, cancelled)
+        progress: Progress percentage (0-100)
+        priority: Priority level (low, medium, high)
+        created_by: User who created the goal
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'goals'
+    
+    goal_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.employee_id'), nullable=False)
+    goal_title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    target_date = db.Column(db.Date)
+    status = db.Column(db.String(20), default='not_started')  # not_started, in_progress, completed, cancelled
+    progress = db.Column(db.Integer, default=0)  # 0-100
+    priority = db.Column(db.String(20), default='medium')  # low, medium, high
+    created_by = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    creator = db.relationship('User', backref='goals_created')
+    
+    def __init__(self, employee_id, goal_title, description=None, target_date=None, priority='medium', created_by=None):
+        self.employee_id = employee_id
+        self.goal_title = goal_title
+        self.description = description
+        self.target_date = target_date
+        self.priority = priority
+        self.created_by = created_by
+    
+    def update_progress(self, progress):
+        """Update goal progress."""
+        self.progress = min(100, max(0, progress))
+        if self.progress == 100:
+            self.status = 'completed'
+        elif self.progress > 0:
+            self.status = 'in_progress'
+        self.updated_at = datetime.utcnow()
+    
+    def is_overdue(self):
+        """Check if goal is overdue."""
+        if self.target_date and self.status not in ['completed', 'cancelled']:
+            return datetime.now().date() > self.target_date
+        return False
+    
+    def to_dict(self):
+        return {
+            'goal_id': self.goal_id,
+            'employee_id': self.employee_id,
+            'goal_title': self.goal_title,
+            'description': self.description,
+            'target_date': self.target_date.isoformat() if self.target_date else None,
+            'status': self.status,
+            'progress': self.progress,
+            'priority': self.priority,
+            'is_overdue': self.is_overdue()
+        }
+    
+    def __repr__(self):
+        return f"<Goal {self.goal_id}: {self.goal_title} - {self.progress}%>"
+
+
+class Feedback(db.Model):
+    """
+    Feedback model for 360-degree feedback system.
+    
+    Attributes:
+        feedback_id: Primary key
+        employee_id: Foreign key to Employee (recipient)
+        from_user_id: Foreign key to User (feedback giver)
+        feedback_type: Type of feedback (peer, manager, self, subordinate)
+        rating: Rating score (1-5)
+        comments: Feedback comments
+        is_anonymous: Whether feedback is anonymous
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'feedback'
+    
+    feedback_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.employee_id'), nullable=False)
+    from_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    feedback_type = db.Column(db.String(20), nullable=False)  # peer, manager, self, subordinate
+    rating = db.Column(db.Integer)  # 1-5
+    comments = db.Column(db.Text)
+    is_anonymous = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    from_user = db.relationship('User', backref='feedback_given')
+    
+    def __init__(self, employee_id, from_user_id, feedback_type, rating=None, comments=None, is_anonymous=False):
+        self.employee_id = employee_id
+        self.from_user_id = from_user_id
+        self.feedback_type = feedback_type
+        self.rating = rating
+        self.comments = comments
+        self.is_anonymous = is_anonymous
+    
+    def to_dict(self):
+        return {
+            'feedback_id': self.feedback_id,
+            'employee_id': self.employee_id,
+            'from_user_id': self.from_user_id if not self.is_anonymous else None,
+            'feedback_type': self.feedback_type,
+            'rating': self.rating,
+            'comments': self.comments,
+            'is_anonymous': self.is_anonymous,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        return f"<Feedback {self.feedback_id}: {self.feedback_type} for Employee {self.employee_id}>"
+
+
+# ==================== ONBOARDING & RECRUITMENT MODELS ====================
+
+class Recruitment(db.Model):
+    """
+    Recruitment model for tracking job candidates.
+    
+    Attributes:
+        recruitment_id: Primary key
+        candidate_name: Name of candidate
+        email: Candidate email
+        phone: Candidate phone
+        position_applied: Position applied for
+        department_id: Foreign key to Department
+        resume_file: Resume filename
+        status: Recruitment status (applied, screening, interview, offer, hired, rejected)
+        application_date: Date of application
+        interview_date: Scheduled interview date
+        notes: Recruitment notes
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'recruitment'
+    
+    recruitment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    candidate_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(20))
+    position_applied = db.Column(db.String(100), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.department_id'))
+    resume_file = db.Column(db.String(255))
+    status = db.Column(db.String(20), default='applied')  # applied, screening, interview, offer, hired, rejected
+    application_date = db.Column(db.Date, default=datetime.utcnow)
+    interview_date = db.Column(db.DateTime)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __init__(self, candidate_name, email, position_applied, phone=None, department_id=None):
+        self.candidate_name = candidate_name
+        self.email = email
+        self.position_applied = position_applied
+        self.phone = phone
+        self.department_id = department_id
+    
+    def update_status(self, new_status):
+        """Update recruitment status."""
+        self.status = new_status
+        self.updated_at = datetime.utcnow()
+    
+    def schedule_interview(self, interview_date):
+        """Schedule interview."""
+        self.interview_date = interview_date
+        self.status = 'interview'
+        self.updated_at = datetime.utcnow()
+    
+    def to_dict(self):
+        return {
+            'recruitment_id': self.recruitment_id,
+            'candidate_name': self.candidate_name,
+            'email': self.email,
+            'position_applied': self.position_applied,
+            'status': self.status,
+            'application_date': self.application_date.isoformat() if self.application_date else None,
+            'interview_date': self.interview_date.isoformat() if self.interview_date else None
+        }
+    
+    def __repr__(self):
+        return f"<Recruitment {self.recruitment_id}: {self.candidate_name} - {self.status}>"
+
+
+class OnboardingTask(db.Model):
+    """
+    Onboarding task model for new hire checklist.
+    
+    Attributes:
+        task_id: Primary key
+        employee_id: Foreign key to Employee
+        task_title: Title of onboarding task
+        description: Task description
+        assigned_to: User responsible for completing task
+        due_date: Task due date
+        status: Task status (pending, in_progress, completed)
+        completed_date: Date task was completed
+        priority: Task priority (low, medium, high)
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'onboarding_tasks'
+    
+    task_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.employee_id'), nullable=False)
+    task_title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    due_date = db.Column(db.Date)
+    status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed
+    completed_date = db.Column(db.Date)
+    priority = db.Column(db.String(20), default='medium')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    assigned_user = db.relationship('User', backref='onboarding_tasks_assigned')
+    
+    def __init__(self, employee_id, task_title, description=None, assigned_to=None, due_date=None, priority='medium'):
+        self.employee_id = employee_id
+        self.task_title = task_title
+        self.description = description
+        self.assigned_to = assigned_to
+        self.due_date = due_date
+        self.priority = priority
+    
+    def mark_completed(self):
+        """Mark task as completed."""
+        self.status = 'completed'
+        self.completed_date = datetime.now().date()
+    
+    def is_overdue(self):
+        """Check if task is overdue."""
+        if self.due_date and self.status != 'completed':
+            return datetime.now().date() > self.due_date
+        return False
+    
+    def to_dict(self):
+        return {
+            'task_id': self.task_id,
+            'employee_id': self.employee_id,
+            'task_title': self.task_title,
+            'status': self.status,
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'priority': self.priority,
+            'is_overdue': self.is_overdue()
+        }
+    
+    def __repr__(self):
+        return f"<OnboardingTask {self.task_id}: {self.task_title} - {self.status}>"
+
+
+# ==================== SCHEDULING MODELS ====================
+
+class Schedule(db.Model):
+    """
+    Schedule model for managing employee work schedules.
+    
+    Attributes:
+        schedule_id: Primary key
+        employee_id: Foreign key to Employee
+        shift_id: Foreign key to Shift
+        schedule_date: Date of scheduled shift
+        start_time: Shift start time
+        end_time: Shift end time
+        status: Schedule status (scheduled, completed, cancelled, no_show)
+        notes: Additional notes
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'schedules'
+    
+    schedule_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.employee_id'), nullable=False)
+    shift_id = db.Column(db.Integer, db.ForeignKey('shifts.shift_id'))
+    schedule_date = db.Column(db.Date, nullable=False)
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    status = db.Column(db.String(20), default='scheduled')  # scheduled, completed, cancelled, no_show
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __init__(self, employee_id, schedule_date, start_time, end_time, shift_id=None):
+        self.employee_id = employee_id
+        self.schedule_date = schedule_date
+        self.start_time = start_time
+        self.end_time = end_time
+        self.shift_id = shift_id
+    
+    def get_duration_hours(self):
+        """Calculate shift duration in hours."""
+        from datetime import datetime, timedelta
+        start = datetime.combine(self.schedule_date, self.start_time)
+        end = datetime.combine(self.schedule_date, self.end_time)
+        if end < start:
+            end += timedelta(days=1)
+        duration = end - start
+        return duration.total_seconds() / 3600
+    
+    def mark_completed(self):
+        """Mark schedule as completed."""
+        self.status = 'completed'
+        self.updated_at = datetime.utcnow()
+    
+    def to_dict(self):
+        return {
+            'schedule_id': self.schedule_id,
+            'employee_id': self.employee_id,
+            'schedule_date': self.schedule_date.isoformat() if self.schedule_date else None,
+            'start_time': self.start_time.strftime('%H:%M') if self.start_time else None,
+            'end_time': self.end_time.strftime('%H:%M') if self.end_time else None,
+            'status': self.status,
+            'duration_hours': self.get_duration_hours()
+        }
+    
+    def __repr__(self):
+        return f"<Schedule {self.schedule_id}: Employee {self.employee_id} on {self.schedule_date}>"
+
+
+class Shift(db.Model):
+    """
+    Shift model for defining shift templates.
+    
+    Attributes:
+        shift_id: Primary key
+        shift_name: Name of shift (e.g., Morning, Evening, Night)
+        start_time: Default start time
+        end_time: Default end time
+        description: Shift description
+        is_active: Whether shift is currently active
+        created_at: Record creation timestamp
+    """
+    __tablename__ = 'shifts'
+    
+    shift_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    shift_name = db.Column(db.String(50), nullable=False, unique=True)
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    schedules = db.relationship('Schedule', backref='shift', lazy='dynamic')
+    
+    def __init__(self, shift_name, start_time, end_time, description=None):
+        self.shift_name = shift_name
+        self.start_time = start_time
+        self.end_time = end_time
+        self.description = description
+    
+    def to_dict(self):
+        return {
+            'shift_id': self.shift_id,
+            'shift_name': self.shift_name,
+            'start_time': self.start_time.strftime('%H:%M') if self.start_time else None,
+            'end_time': self.end_time.strftime('%H:%M') if self.end_time else None,
+            'is_active': self.is_active
+        }
+    
+    def __repr__(self):
+        return f"<Shift {self.shift_id}: {self.shift_name}>"

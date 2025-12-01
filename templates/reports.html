@@ -7,13 +7,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <h1 class="text-3xl font-semibold text-gray-900">Advanced Reports & Analytics</h1>
     <p class="text-gray-600 mt-1">Generate detailed reports with filters and visualizations</p>
 </div>
 
 <!-- Report Type Selection -->
-<div class="bg-white rounded-lg shadow mb-6">
+<div class="bg-white rounded-lg shadow mb-6 card-animate">
     <div class="border-b border-gray-200">
         <nav class="flex -mb-px">
             <a href="{{ url_for('reports', type='overview') }}" 
@@ -38,7 +38,7 @@
 
 {% if report_type != 'overview' %}
 <!-- Filters -->
-<div class="bg-white rounded-lg shadow p-6 mb-6">
+<div class="bg-white rounded-lg shadow p-6 mb-6 card-animate">
     <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
     <form method="GET" action="{{ url_for('reports') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <input type="hidden" name="type" value="{{ report_type }}">
@@ -86,15 +86,7 @@
     {{ exports_section() }}
     
 {% elif report_type == 'attendance_summary' and report_data %}
-    {% if chart_data and chart_data.get('attendance_chart') %}
-    <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <div class="h-96">
-            <canvas id="attendanceChart"></canvas>
-        </div>
-    </div>
-    {% endif %}
-    
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="bg-white rounded-lg shadow overflow-hidden card-animate">
         <div class="px-6 py-4 border-b flex justify-between items-center">
             <div>
                 <h3 class="text-lg font-semibold text-gray-900">Attendance Summary Report</h3>
@@ -144,17 +136,7 @@
     </div>
 
 {% elif report_type == 'leave_summary' and report_data %}
-    {% if chart_data and chart_data.get('leave_chart') %}
-    <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <div class="h-80 flex justify-center">
-            <div class="w-96">
-                <canvas id="leaveChart"></canvas>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="bg-white rounded-lg shadow overflow-hidden card-animate">
         <div class="px-6 py-4 border-b flex justify-between items-center">
             <div>
                 <h3 class="text-lg font-semibold text-gray-900">Leave Summary Report</h3>
@@ -190,7 +172,7 @@
                 </thead>
                 <tbody>
                     {% for row in report_data %}
-                    <tr>
+                    <tr class="animate-item">
                         <td class="font-medium text-gray-900">{{ row.employee.name }}</td>
                         <td>{{ row.employee.department.name if row.employee.department else 'N/A' }}</td>
                         <td class="text-center">{{ row.total_requests }}</td>
@@ -206,31 +188,21 @@
     </div>
 
 {% elif report_type == 'payroll_summary' and report_data %}
-    {% if chart_data and chart_data.get('payroll_chart') %}
-    <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <div class="h-80 flex justify-center">
-            <div class="w-96">
-                <canvas id="payrollChart"></canvas>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
-    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6 card-animate">
         <div class="px-6 py-4 border-b">
             <h3 class="text-lg font-semibold text-gray-900">Payroll Summary</h3>
             <p class="text-sm text-gray-600 mt-1">{{ report_data.employees|length }} employees</p>
         </div>
         
         <!-- Totals -->
-        <div class="px-6 py-4 bg-blue-50 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="px-6 py-4 bg-blue-50 grid grid-cols-1 md:grid-cols-2 gap-4" style="background: #eff6ff;">
             <div>
-                <p class="text-sm text-gray-600">Total Annual Payroll</p>
-                <p class="text-2xl font-bold text-gray-900">${{ "{:,.2f}".format(report_data.total_annual_payroll) }}</p>
+                <p class="text-sm payroll-label" style="color: #6b7280;">Total Annual Payroll</p>
+                <p class="text-2xl font-bold payroll-value" style="color: #1f2937;">${{ "{:,.2f}".format(report_data.total_annual_payroll) }}</p>
             </div>
             <div>
-                <p class="text-sm text-gray-600">Total Monthly Payroll</p>
-                <p class="text-2xl font-bold text-gray-900">${{ "{:,.2f}".format(report_data.total_monthly_payroll) }}</p>
+                <p class="text-sm payroll-label" style="color: #6b7280;">Total Monthly Payroll</p>
+                <p class="text-2xl font-bold payroll-value" style="color: #1f2937;">${{ "{:,.2f}".format(report_data.total_monthly_payroll) }}</p>
             </div>
         </div>
         
@@ -248,7 +220,7 @@
                 </thead>
                 <tbody>
                     {% for row in report_data.employees %}
-                    <tr>
+                    <tr class="animate-item">
                         <td class="font-medium text-gray-900">{{ row.employee.name }}</td>
                         <td>{{ row.employee.department.name if row.employee.department else 'N/A' }}</td>
                         <td>{{ row.employee.role.title if row.employee.role else 'N/A' }}</td>
@@ -411,19 +383,19 @@
 </div>
 
 <!-- API Information -->
-<div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-    <h3 class="text-lg font-semibold text-blue-900 mb-3">REST API Endpoints</h3>
-    <p class="text-sm text-blue-800 mb-4">Access employee data programmatically via our REST API:</p>
+<div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6 api-section">
+    <h3 class="text-lg font-semibold api-title" style="color: #1e3a8a;">REST API Endpoints</h3>
+    <p class="text-sm api-subtitle" style="color: #1e40af;">Access employee data programmatically via our REST API:</p>
     <div class="space-y-2 font-mono text-sm">
-        <div class="bg-white rounded p-3">
+        <div class="bg-white rounded p-3 api-endpoint">
             <span class="text-green-600 font-semibold">GET</span>
-            <span class="ml-3 text-gray-700">/api/employees</span>
-            <span class="ml-3 text-gray-500">- Get all employees as JSON</span>
+            <span class="ml-3 api-path" style="color: #374151;">/api/employees</span>
+            <span class="ml-3 api-desc" style="color: #6b7280;">- Get all employees as JSON</span>
         </div>
-        <div class="bg-white rounded p-3">
+        <div class="bg-white rounded p-3 api-endpoint">
             <span class="text-green-600 font-semibold">GET</span>
-            <span class="ml-3 text-gray-700">/api/stats</span>
-            <span class="ml-3 text-gray-500">- Get dashboard statistics</span>
+            <span class="ml-3 api-path" style="color: #374151;">/api/stats</span>
+            <span class="ml-3 api-desc" style="color: #6b7280;">- Get dashboard statistics</span>
         </div>
     </div>
 </div>

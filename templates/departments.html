@@ -3,7 +3,7 @@
 {% block title %}Departments{% endblock %}
 
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <div class="flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-semibold text-gray-900">Departments</h1>
@@ -17,20 +17,33 @@
     </div>
 </div>
 
-<!-- Departments Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Global Search Bar -->
+<div class="mb-6">
+    <div class="relative">
+        <input type="text" 
+               id="globalSearch" 
+               class="form-input w-full pl-10" 
+               placeholder="Search departments, roles, or employees..."
+               onkeyup="globalSearch()">
+        <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+    </div>
+</div>
+
+<!-- Departments List -->
+<div class="space-y-6">
     {% for dept in departments %}
-    <div class="card">
-        <div class="flex justify-between items-start mb-4">
+    <div class="card animate-item">
+        <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-200">
             <div>
-                <h3 class="text-lg font-semibold text-gray-900">{{ dept.name }}</h3>
-                <p class="text-sm text-gray-500 mt-1">{{ dept.get_employee_count() }} employees</p>
+                <h3 class="text-xl font-semibold text-gray-900">{{ dept.name }}</h3>
+                <p class="text-sm text-gray-500 mt-1">{{ dept.get_employee_count() }} employee(s)</p>
+                <p class="text-sm text-gray-600 mt-2">{{ dept.description or 'No description provided' }}</p>
             </div>
             {% if user_role == 'admin' %}
             <div class="flex gap-2">
                 <button onclick="editDepartment({{ dept.department_id }}, '{{ dept.name }}', '{{ dept.description or '' }}')" 
                         class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    Edit
+                    Edit Dept
                 </button>
                 <form method="POST" 
                       action="{{ url_for('delete_department', department_id=dept.department_id) }}"
@@ -39,13 +52,71 @@
                     <button type="submit" 
                             class="text-red-600 hover:text-red-800 text-sm font-medium"
                             {% if not dept.can_delete() %}disabled title="Cannot delete department with employees"{% endif %}>
-                        Delete
+                        Delete Dept
                     </button>
                 </form>
             </div>
             {% endif %}
         </div>
-        <p class="text-sm text-gray-600">{{ dept.description or 'No description provided' }}</p>
+        
+        <!-- Employees in this department -->
+        {% if dept.employees %}
+        <div class="mb-3 px-4">
+            <input type="text" 
+                   class="form-input w-full sm:w-64" 
+                   placeholder="Search employees in {{ dept.name }}..."
+                   onkeyup="searchTableRows(this, 'dept-table-{{ dept.department_id }}')">
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200" id="dept-table-{{ dept.department_id }}">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salary</th>
+                        {% if user_role == 'admin' %}
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for emp in dept.employees %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm font-semibold text-gray-700">{{ loop.index }}</td>
+                        <td class="px-4 py-3 text-sm font-mono font-semibold text-blue-600">WFX-{{ "%04d"|format(emp.employee_id) }}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ emp.name }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ emp.email }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                {{ emp.role.title if emp.role else 'No Role' }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900">${{ "{:,.2f}".format(emp.salary) if emp.salary else '0.00' }}</td>
+                        {% if user_role == 'admin' %}
+                        <td class="px-4 py-3 text-sm">
+                            <div class="flex gap-2">
+                                <a href="{{ url_for('edit_employee', employee_id=emp.employee_id) }}" 
+                                   class="text-blue-600 hover:text-blue-800 font-medium">Edit</a>
+                                <form method="POST" 
+                                      action="{{ url_for('delete_employee', employee_id=emp.employee_id) }}"
+                                      onsubmit="return confirm('Are you sure you want to delete {{ emp.name }}?');"
+                                      class="inline">
+                                    <button type="submit" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-500 italic">No employees in this department yet.</p>
+        {% endif %}
     </div>
     {% endfor %}
     
@@ -56,6 +127,7 @@
     {% endif %}
 </div>
 
+<!-- Add Department Modal -->
 <!-- Add Department Modal -->
 {% if user_role == 'admin' %}
 <div id="addModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -104,6 +176,7 @@
 </div>
 
 <script>
+// Modal Functions
 function toggleAddModal() {
     document.getElementById('addModal').classList.toggle('hidden');
 }
@@ -117,6 +190,75 @@ function editDepartment(id, name, description) {
 
 function closeEditModal() {
     document.getElementById('editModal').classList.add('hidden');
+}
+
+// Global Search Function - searches departments, roles, and employees
+function globalSearch() {
+    const filter = document.getElementById('globalSearch').value.toLowerCase();
+    const departments = document.querySelectorAll('.card.animate-item');
+    
+    departments.forEach(dept => {
+        // Get department header text
+        const deptHeader = dept.querySelector('h3').textContent.toLowerCase();
+        const deptDesc = dept.querySelector('.text-gray-600')?.textContent.toLowerCase() || '';
+        
+        // Get all table rows in this department
+        const table = dept.querySelector('table');
+        let hasVisibleRows = false;
+        
+        if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const cells = row.getElementsByTagName('td');
+                let rowText = '';
+                
+                // Concatenate all cell text (including role badge)
+                for (let i = 0; i < cells.length - 1; i++) {
+                    rowText += cells[i].textContent.toLowerCase() + ' ';
+                }
+                
+                // Show/hide row based on match
+                if (rowText.includes(filter) || filter === '') {
+                    row.style.display = '';
+                    hasVisibleRows = true;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // Show department if name/description matches OR if it has visible employee rows
+        if (deptHeader.includes(filter) || deptDesc.includes(filter) || hasVisibleRows || filter === '') {
+            dept.style.display = '';
+        } else {
+            dept.style.display = 'none';
+        }
+    });
+}
+
+// Individual Table Search Function
+function searchTableRows(input, tableId) {
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById(tableId);
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = tbody.getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let text = '';
+        
+        // Concatenate all cell text except actions column
+        for (let j = 0; j < cells.length - 1; j++) {
+            text += cells[j].textContent.toLowerCase() + ' ';
+        }
+        
+        if (text.includes(filter) || filter === '') {
+            rows[i].style.display = '';
+        } else {
+            rows[i].style.display = 'none';
+        }
+    }
 }
 </script>
 {% endif %}

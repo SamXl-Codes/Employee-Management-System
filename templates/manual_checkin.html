@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Check-In - WorkFlowX{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-md mx-auto">
+        <!-- Header -->
+        <div class="mb-8 text-center">
+            <div class="w-20 h-20 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Manual Check-In
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">
+                Record your attendance manually
+            </p>
+        </div>
+
+        <!-- Check-in Form Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <form method="POST" action="{{ url_for('submit_manual_checkin') }}">
+                <!-- Info Banner -->
+                <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="text-sm text-yellow-800 dark:text-yellow-200">
+                            <strong>Note:</strong> Use this only if you cannot scan the QR code. Your check-in will be recorded with current timestamp.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Date & Time -->
+                <div class="mb-6 space-y-3">
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Date</div>
+                            <div class="font-semibold text-gray-900 dark:text-white" id="currentDate"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Check-in Time</div>
+                            <div class="font-semibold text-gray-900 dark:text-white" id="currentTime"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Info -->
+                <div class="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 mb-6">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                        <h4 class="font-semibold text-gray-900 dark:text-white">Status Rules</h4>
+                    </div>
+                    <ul class="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                        <li><strong>Present:</strong> Check-in up to 9:19 AM</li>
+                        <li><strong>Late:</strong> Check-in from 9:20 AM onwards</li>
+                    </ul>
+                </div>
+
+                <!-- Confirmation -->
+                <div class="mb-6">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" required class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                            I confirm that I am present at work and want to record my attendance for today.
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full btn btn-primary py-4 text-lg font-semibold">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Submit Check-In
+                </button>
+            </form>
+        </div>
+
+        <!-- Back Link -->
+        <div class="text-center">
+            <a href="{{ url_for('employee_dashboard') }}" class="text-blue-600 dark:text-blue-400 hover:underline">
+                ← Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update current date and time
+function updateDateTime() {
+    const now = new Date();
+    
+    // Format date
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', dateOptions);
+    
+    // Format time
+    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', timeOptions);
+}
+
+// Update immediately and then every second
+updateDateTime();
+setInterval(updateDateTime, 1000);
+</script>
+{% endblock %}

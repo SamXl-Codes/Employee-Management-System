@@ -3,18 +3,39 @@
 {% block title %}Add Employee{% endblock %}
 
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <h1 class="text-3xl font-semibold text-gray-900">Add New Employee</h1>
     <p class="text-gray-600 mt-1">Fill in the employee details below</p>
 </div>
 
-<div class="max-w-2xl bg-white rounded-lg shadow p-8">
-    <form method="POST" action="{{ url_for('add_employee') }}" class="space-y-6">
+<div class="max-w-2xl bg-white rounded-lg shadow p-8 form-animate">
+    <form method="POST" action="{{ url_for('add_employee') }}" enctype="multipart/form-data" class="space-y-6">
         <!-- Personal Information Section -->
         <div>
             <h2 class="text-xl font-semibold text-gray-900 mb-4">Personal Information</h2>
             
             <div class="space-y-4">
+                <!-- Profile Photo Upload -->
+                <div>
+                    <label for="profile_image" class="form-label">
+                        Profile Photo
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <div id="preview-container" class="hidden">
+                            <img id="image-preview" class="profile-image profile-image-lg" src="" alt="Preview">
+                        </div>
+                        <div class="flex-1">
+                            <input type="file" 
+                                   id="profile_image" 
+                                   name="profile_image" 
+                                   accept="image/png, image/jpeg, image/jpg, image/gif"
+                                   class="form-input"
+                                   onchange="previewImage(event)">
+                            <p class="text-sm text-gray-500 mt-1">Upload JPG, PNG, or GIF (Max 5MB)</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div>
                     <label for="name" class="form-label">
                         Full Name <span class="text-red-500">*</span>
@@ -113,4 +134,18 @@
         </div>
     </form>
 </div>
+
+<script>
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('image-preview').src = e.target.result;
+            document.getElementById('preview-container').classList.remove('hidden');
+        }
+        reader.readAsDataURL(file);
+    }
+}
+</script>
 {% endblock %}

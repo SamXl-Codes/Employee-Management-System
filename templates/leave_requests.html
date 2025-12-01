@@ -3,20 +3,22 @@
 {% block title %}Leave Requests{% endblock %}
 
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <div class="flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-semibold text-gray-900">Leave Requests</h1>
-            <p class="text-gray-600 mt-1">Manage employee leave applications</p>
+            <p class="text-gray-600 mt-1">{% if user_role == 'admin' %}Manage employee leave applications{% else %}View and submit leave requests{% endif %}</p>
         </div>
+        {% if user_role == 'employee' %}
         <a href="{{ url_for('add_leave_request') }}" class="btn btn-primary">
             + Request Leave
         </a>
+        {% endif %}
     </div>
 </div>
 
 <!-- Filter Tabs -->
-<div class="bg-white rounded-lg shadow mb-6">
+<div class="bg-white rounded-lg shadow mb-6 card-animate">
     <div class="border-b border-gray-200">
         <nav class="flex -mb-px">
             <a href="{{ url_for('leave_requests') }}" 
@@ -43,7 +45,7 @@
 <div class="space-y-4">
     {% if leaves %}
         {% for leave in leaves %}
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-lg shadow p-6 animate-item">
             <div class="flex justify-between items-start">
                 <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">

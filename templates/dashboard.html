@@ -2,20 +2,25 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <h1 class="text-3xl font-semibold text-gray-900">Dashboard</h1>
     <p class="text-gray-600 mt-1">Welcome back, {{ current_user }}! Here's your HR overview.</p>
 </div>
 
 <!-- Statistics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <!-- Total Employees Card -->
-    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+    <!-- Total Employees Card - Clickable -->
+    <a href="{{ url_for('employees') }}" class="block bg-white rounded-lg shadow p-6 hover:shadow-xl transition-all transform hover:scale-105 animate-item cursor-pointer">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Employees</p>
                 <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.total_employees }}</p>
+                <p class="text-xs text-blue-600 mt-2 font-medium">Click to view all →</p>
             </div>
             <div class="bg-blue-100 rounded-full p-3">
                 <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,14 +28,15 @@
                 </svg>
             </div>
         </div>
-    </div>
+    </a>
     
-    <!-- Departments Card -->
-    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+    <!-- Departments Card - Clickable -->
+    <a href="{{ url_for('departments') }}" class="block bg-white rounded-lg shadow p-6 hover:shadow-xl transition-all transform hover:scale-105 animate-item cursor-pointer">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Departments</p>
                 <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.total_departments }}</p>
+                <p class="text-xs text-green-600 mt-2 font-medium">Click to manage →</p>
             </div>
             <div class="bg-green-100 rounded-full p-3">
                 <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,14 +44,15 @@
                 </svg>
             </div>
         </div>
-    </div>
+    </a>
     
-    <!-- Pending Leave Requests Card -->
-    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+    <!-- Pending Leave Requests Card - Clickable -->
+    <a href="{{ url_for('leave_requests') }}" class="block bg-white rounded-lg shadow p-6 hover:shadow-xl transition-all transform hover:scale-105 animate-item cursor-pointer">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Pending Leaves</p>
                 <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.pending_leaves }}</p>
+                <p class="text-xs text-yellow-600 mt-2 font-medium">Click to review →</p>
             </div>
             <div class="bg-yellow-100 rounded-full p-3">
                 <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,42 +60,49 @@
                 </svg>
             </div>
         </div>
-    </div>
+    </a>
     
-    <!-- Job Roles Card -->
-    <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+    <!-- QR Check-In Card - Clickable -->
+    <a href="{{ url_for('admin_qr_checkin') }}" class="block bg-white rounded-lg shadow p-6 hover:shadow-xl transition-all transform hover:scale-105 animate-item cursor-pointer">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Job Roles</p>
-                <p class="text-4xl font-bold text-gray-900 mt-2">{{ stats.total_roles }}</p>
+                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">QR Check-In</p>
+                <p class="text-4xl font-bold text-gray-900 mt-2"><i class="fas fa-qrcode"></i></p>
+                <p class="text-xs text-purple-600 mt-2 font-medium">View QR codes →</p>
             </div>
             <div class="bg-purple-100 rounded-full p-3">
                 <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
                 </svg>
             </div>
         </div>
-    </div>
+    </a>
 </div>
 
 <!-- Quick Actions & Pending Approvals -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Quick Actions -->
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="bg-white rounded-lg shadow p-6 card-animate">
         <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div class="space-y-3">
             {% if user_role == 'admin' %}
             <a href="{{ url_for('add_employee') }}" class="block px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-md text-blue-700 font-medium transition-colors">
-                + Add New Employee
+                <i class="fas fa-user-plus mr-2"></i>Add New Employee
             </a>
-            <a href="{{ url_for('attendance') }}" class="block px-4 py-3 bg-green-50 hover:bg-green-100 rounded-md text-green-700 font-medium transition-colors">
-                Mark Today's Attendance
+            <a href="{{ url_for('payroll_dashboard') }}" class="block px-4 py-3 bg-green-50 hover:bg-green-100 rounded-md text-green-700 font-medium transition-colors">
+                <i class="fas fa-money-bill-wave mr-2"></i>Payroll Management
+            </a>
+            <a href="{{ url_for('performance_reviews') }}" class="block px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-md text-purple-700 font-medium transition-colors">
+                <i class="fas fa-chart-line mr-2"></i>Performance Reviews
+            </a>
+            <a href="{{ url_for('recruitment_pipeline') }}" class="block px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-md text-indigo-700 font-medium transition-colors">
+                <i class="fas fa-users mr-2"></i>Recruitment Pipeline
             </a>
             <a href="{{ url_for('leave_requests') }}" class="block px-4 py-3 bg-yellow-50 hover:bg-yellow-100 rounded-md text-yellow-700 font-medium transition-colors">
-                Review Leave Requests
+                <i class="fas fa-calendar-alt mr-2"></i>Review Leave Requests
             </a>
-            <a href="{{ url_for('reports') }}" class="block px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-md text-purple-700 font-medium transition-colors">
-                Generate Reports
+            <a href="{{ url_for('reports') }}" class="block px-4 py-3 bg-red-50 hover:bg-red-100 rounded-md text-red-700 font-medium transition-colors">
+                <i class="fas fa-file-alt mr-2"></i>Generate Reports
             </a>
             {% else %}
             <a href="{{ url_for('add_leave_request') }}" class="block px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-md text-blue-700 font-medium transition-colors">

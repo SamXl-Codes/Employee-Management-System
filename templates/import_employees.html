@@ -3,13 +3,13 @@
 {% block title %}Import Employees{% endblock %}
 
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <h1 class="text-3xl font-semibold text-gray-900">Bulk Import Employees</h1>
     <p class="text-gray-600 mt-1">Upload a CSV file to import multiple employees at once</p>
 </div>
 
 <!-- Upload Form -->
-<div class="max-w-3xl bg-white rounded-lg shadow p-8 mb-6">
+<div class="max-w-3xl bg-white rounded-lg shadow p-8 mb-6 form-animate">
     <h2 class="text-xl font-semibold text-gray-900 mb-4">Upload CSV File</h2>
     
     <form method="POST" action="{{ url_for('import_employees') }}" enctype="multipart/form-data" class="space-y-6">

@@ -3,18 +3,61 @@
 {% block title %}My Dashboard{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-semibold text-gray-900">Welcome Back, {{ current_user.name }}!</h1>
-    <p class="text-gray-600 mt-1">{{ current_user.role.title if current_user.role else 'Employee' }} • {{ current_user.department.name if current_user.department else 'Department' }}</p>
-    <p class="text-sm text-gray-500 mt-1">{{ years_employed }} years with the company</p>
+<div class="mb-8 flex items-center gap-6 page-content">
+    <div class="relative" style="animation: fadeInUp 0.5s ease-out;">
+        <img src="{{ url_for('static', filename='images/profiles/' + (current_user.profile_image if current_user.profile_image else 'default-avatar.svg')) }}" 
+             alt="{{ current_user.name }}" 
+             class="profile-image profile-image-lg"
+             id="profile-img">
+        <button onclick="document.getElementById('upload-modal').classList.remove('hidden')" 
+                class="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700 transition"
+                title="Upload new photo">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+        </button>
+    </div>
+    <div style="animation: fadeInUp 0.6s ease-out;">
+        <h1 class="text-3xl font-semibold dashboard-title">Welcome Back, {{ current_user.name }}!</h1>
+        <p class="dashboard-subtitle mt-1">{{ current_user.role.title if current_user.role else 'Employee' }} • {{ current_user.department.name if current_user.department else 'Department' }}</p>
+        <p class="text-sm dashboard-text mt-1">{{ years_employed }} years with the company</p>
+    </div>
+</div>
+
+<!-- Upload Photo Modal -->
+<div id="upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-semibold mb-4">Upload Profile Photo</h3>
+        <form action="{{ url_for('upload_employee_photo') }}" method="POST" enctype="multipart/form-data">
+            <div class="mb-4">
+                <div id="upload-preview-container" class="hidden mb-4 flex justify-center">
+                    <img id="upload-preview" class="profile-image profile-image-lg" src="" alt="Preview">
+                </div>
+                <input type="file" 
+                       name="profile_image" 
+                       accept="image/png, image/jpeg, image/jpg, image/gif"
+                       required
+                       class="form-input"
+                       onchange="previewUpload(event)">
+                <p class="text-sm text-gray-500 mt-2">JPG, PNG, or GIF (Max 5MB)</p>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" 
+                        onclick="document.getElementById('upload-modal').classList.add('hidden')" 
+                        class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Personal Info Card -->
-<div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 mb-8 text-white">
+<div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 mb-8 text-white animate-item">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
             <p class="text-blue-100 text-sm">Employee ID</p>
-            <p class="text-2xl font-bold">#{{ current_user.employee_id }}</p>
+            <p class="text-2xl font-bold font-mono">WFX-{{ "%04d"|format(current_user.employee_id) }}</p>
         </div>
         <div>
             <p class="text-blue-100 text-sm">Email</p>
@@ -27,22 +70,82 @@
     </div>
 </div>
 
-<!-- Today's Status -->
-<div class="bg-white rounded-lg shadow p-6 mb-8">
-    <h2 class="text-xl font-semibold text-gray-900 mb-4">Today's Status</h2>
-    <div class="flex items-center space-x-4">
-        {% if today_attendance %}
-            <span class="px-4 py-2 rounded-full text-lg font-semibold
-                {% if today_attendance.status == 'Present' %}bg-green-100 text-green-800
-                {% elif today_attendance.status == 'Late' %}bg-yellow-100 text-yellow-800
-                {% else %}bg-red-100 text-red-800{% endif %}">
-                {{ today_attendance.status }}
-            </span>
-            <p class="text-gray-600">You are marked as <strong>{{ today_attendance.status }}</strong> today</p>
-        {% else %}
-            <span class="px-4 py-2 rounded-full text-lg font-semibold bg-gray-100 text-gray-800">Not Marked</span>
-            <p class="text-gray-600">Your attendance has not been recorded yet</p>
-        {% endif %}
+<!-- Today's Check-In/Check-Out Status -->
+<div class="bg-white rounded-lg shadow-lg p-6 mb-8 dashboard-card border-l-4 border-blue-500">
+    <h2 class="text-xl font-semibold dashboard-heading mb-4 text-gray-800 dark:text-white">Today's Attendance</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Check-In Status -->
+        <div class="border rounded-lg p-4">
+            {% if today_attendance and today_attendance.check_in_time %}
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Check-In Time</p>
+                        <p class="text-lg font-bold text-gray-900">{{ today_attendance.check_in_time.strftime('%I:%M %p') }}</p>
+                    </div>
+                </div>
+                <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold
+                    {% if today_attendance.status == 'Present' %}bg-green-100 text-green-800
+                    {% elif today_attendance.status == 'Late' %}bg-yellow-100 text-yellow-800
+                    {% else %}bg-red-100 text-red-800{% endif %}">
+                    {{ today_attendance.status }}
+                </span>
+            {% else %}
+                <div class="text-center py-4">
+                    <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-sm text-gray-600">Not checked in yet</p>
+                    <p class="text-xs text-gray-500 mt-2">Scan the QR code at office entrance to check in</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Check-Out Status -->
+        <div class="border rounded-lg p-4">
+            {% if today_attendance and today_attendance.check_out_time %}
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Check-Out Time</p>
+                        <p class="text-lg font-bold text-gray-900">{{ today_attendance.check_out_time.strftime('%I:%M %p') }}</p>
+                    </div>
+                </div>
+                <div class="mt-2 bg-blue-50 rounded p-2">
+                    <p class="text-sm text-blue-900">
+                        <strong>Hours Worked:</strong> {{ today_attendance.calculate_hours_worked() }}h
+                    </p>
+                </div>
+            {% elif today_attendance and today_attendance.check_in_time %}
+                <div class="text-center py-4">
+                    <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    <p class="text-sm text-gray-600 mb-3">Ready to leave?</p>
+                    <form method="POST" action="{{ url_for('employee_checkout') }}" class="inline">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            Check Out Now
+                        </button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <svg class="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <p class="text-sm text-gray-500">Check in first</p>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -77,20 +180,20 @@
 </div>
 
 <!-- Leave Request Summary -->
-<div class="bg-white rounded-lg shadow p-6 mb-8">
-    <h2 class="text-xl font-semibold text-gray-900 mb-4">Leave Balance Summary</h2>
+<div class="bg-white rounded-lg shadow p-6 mb-8 dashboard-card">
+    <h2 class="text-xl font-semibold dashboard-heading mb-4 text-gray-800 dark:text-white">Leave Balance Summary</h2>
     <div class="grid grid-cols-3 gap-4">
-        <div class="text-center p-4 bg-yellow-50 rounded-lg">
+        <div class="text-center p-4 bg-yellow-50 rounded-lg leave-box">
             <p class="text-3xl font-bold text-yellow-600">{{ pending_leaves }}</p>
-            <p class="text-sm text-gray-600 mt-1">Pending Approval</p>
+            <p class="text-sm dashboard-text mt-1">Pending Approval</p>
         </div>
-        <div class="text-center p-4 bg-green-50 rounded-lg">
+        <div class="text-center p-4 bg-green-50 rounded-lg leave-box">
             <p class="text-3xl font-bold text-green-600">{{ approved_leaves }}</p>
-            <p class="text-sm text-gray-600 mt-1">Approved</p>
+            <p class="text-sm dashboard-text mt-1">Approved</p>
         </div>
-        <div class="text-center p-4 bg-red-50 rounded-lg">
+        <div class="text-center p-4 bg-red-50 rounded-lg leave-box">
             <p class="text-3xl font-bold text-red-600">{{ rejected_leaves }}</p>
-            <p class="text-sm text-gray-600 mt-1">Rejected</p>
+            <p class="text-sm dashboard-text mt-1">Rejected</p>
         </div>
     </div>
 </div>
@@ -99,9 +202,9 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Recent Leave Requests -->
     <div class="lg:col-span-2">
-        <div class="bg-white rounded-lg shadow">
-            <div class="px-6 py-4 border-b">
-                <h2 class="text-lg font-semibold text-gray-900">My Recent Leave Requests</h2>
+        <div class="bg-white rounded-lg shadow dashboard-card">
+            <div class="px-6 py-4 border-b dashboard-border">
+                <h2 class="text-lg font-semibold dashboard-heading text-gray-800 dark:text-white">My Recent Leave Requests</h2>
             </div>
             <div class="divide-y">
                 {% if recent_leaves %}
@@ -150,9 +253,9 @@
     
     <!-- Quick Actions Panel -->
     <div>
-        <div class="bg-white rounded-lg shadow mb-6">
-            <div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-blue-100">
-                <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+        <div class="bg-white rounded-lg shadow mb-6 dashboard-card">
+            <div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-blue-100 dashboard-border">
+                <h2 class="text-lg font-semibold dashboard-heading text-gray-800 dark:text-white">Quick Actions</h2>
             </div>
             <div class="divide-y">
                 <a href="{{ url_for('add_leave_request') }}" class="block px-6 py-4 hover:bg-blue-50 transition">
@@ -177,7 +280,7 @@
                         </div>
                     </div>
                 </a>
-                <a href="{{ url_for('my_profile') }}" class="block px-6 py-4 hover:bg-blue-50 transition">
+                <a href="{{ url_for('employee_profile') }}" class="block px-6 py-4 hover:bg-blue-50 transition">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
@@ -188,14 +291,14 @@
                         </div>
                     </div>
                 </a>
-                <a href="#" class="block px-6 py-4 hover:bg-blue-50 transition" onclick="alert('Contact IT Support at itsupport@workflowx.com to update your profile or change password.'); return false;">
+                <a href="{{ url_for('update_my_profile') }}" class="block px-6 py-4 hover:bg-blue-50 transition">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                         </svg>
                         <div>
                             <p class="font-medium text-gray-900">Edit Profile</p>
-                            <p class="text-xs text-gray-500">Update personal information</p>
+                            <p class="text-xs text-gray-500">Update phone, photo & password</p>
                         </div>
                     </div>
                 </a>
@@ -214,9 +317,9 @@
         </div>
         
         <!-- Help Card -->
-        <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg shadow p-6">
-            <h3 class="font-semibold text-gray-900 mb-2">Need Help?</h3>
-            <p class="text-sm text-gray-600 mb-4">Contact HR for leaves and payroll. Contact IT Support for password and system issues.</p>
+        <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg shadow p-6 help-card">
+            <h3 class="font-semibold dashboard-heading mb-2 text-gray-800 dark:text-white">Need Help?</h3>
+            <p class="text-sm dashboard-text mb-4">Contact HR for leaves and payroll. Contact IT Support for password and system issues.</p>
             <div class="space-y-2">
                 <a href="mailto:hr@workflowx.com" class="block text-sm text-blue-600 hover:text-blue-800 font-medium">
                     Email HR Support
@@ -228,4 +331,164 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Employee Dashboard Dark Mode Fixes */
+    .dashboard-title {
+        color: #1f2937;
+    }
+    
+    .dashboard-subtitle {
+        color: #6b7280;
+    }
+    
+    .dashboard-text {
+        color: #6b7280;
+    }
+    
+    .dashboard-heading {
+        color: #1f2937;
+    }
+    
+    .dashboard-label {
+        color: #6b7280;
+    }
+    
+    .dashboard-card {
+        background: white;
+    }
+    
+    .dashboard-border {
+        border-color: #e5e7eb;
+    }
+    
+    .leave-box {
+        background: rgba(254, 243, 199, 0.5);
+    }
+    
+    .leave-box:nth-child(2) {
+        background: rgba(220, 252, 231, 0.5);
+    }
+    
+    .leave-box:nth-child(3) {
+        background: rgba(254, 226, 226, 0.5);
+    }
+    
+    .help-card {
+        background: linear-gradient(to bottom right, #faf5ff, #eff6ff);
+    }
+    
+    /* Dark Mode Overrides */
+    [data-theme="dark"] .dashboard-title {
+        color: #f1f5f9 !important;
+    }
+    
+    [data-theme="dark"] .dashboard-subtitle {
+        color: #cbd5e1 !important;
+    }
+    
+    [data-theme="dark"] .dashboard-text {
+        color: #94a3b8 !important;
+    }
+    
+    [data-theme="dark"] .dashboard-heading {
+        color: #f1f5f9 !important;
+    }
+    
+    [data-theme="dark"] .dashboard-label {
+        color: #cbd5e1 !important;
+    }
+    
+    [data-theme="dark"] .dashboard-card {
+        background: #1e293b !important;
+    }
+    
+    [data-theme="dark"] .dashboard-border {
+        border-color: #334155 !important;
+        background: #0f172a !important;
+    }
+    
+    [data-theme="dark"] .leave-box {
+        background: rgba(202, 138, 4, 0.15) !important;
+    }
+    
+    [data-theme="dark"] .leave-box:nth-child(2) {
+        background: rgba(22, 163, 74, 0.15) !important;
+    }
+    
+    [data-theme="dark"] .leave-box:nth-child(3) {
+        background: rgba(220, 38, 38, 0.15) !important;
+    }
+    
+    [data-theme="dark"] .help-card {
+        background: linear-gradient(to bottom right, #1e293b, #0f172a) !important;
+    }
+    
+    [data-theme="dark"] .bg-gradient-to-r.from-blue-50 {
+        background: #0f172a !important;
+    }
+    
+    /* Fix hover effects in dark mode */
+    [data-theme="dark"] .hover\:bg-gray-50:hover {
+        background-color: #334155 !important;
+    }
+    
+    [data-theme="dark"] .hover\:bg-blue-50:hover {
+        background-color: #1e3a5f !important;
+    }
+    
+    [data-theme="dark"] .hover\:bg-blue-100:hover {
+        background-color: #1e3a5f !important;
+    }
+    
+    /* Fix attendance status badges visibility in dark mode */
+    [data-theme="dark"] .bg-green-600 {
+        background-color: #16a34a !important;
+        color: white !important;
+    }
+    
+    [data-theme="dark"] .bg-yellow-100 {
+        background-color: #854d0e !important;
+        color: #fef3c7 !important;
+        font-weight: 600 !important;
+    }
+    
+    [data-theme="dark"] .text-yellow-800 {
+        color: #fef3c7 !important;
+    }
+    
+    [data-theme="dark"] .bg-red-100 {
+        background-color: #991b1b !important;
+        color: #fee2e2 !important;
+        font-weight: 600 !important;
+    }
+    
+    [data-theme="dark"] .text-red-800 {
+        color: #fee2e2 !important;
+    }
+    
+    [data-theme="dark"] .bg-gray-100 {
+        background-color: #374151 !important;
+        color: #e5e7eb !important;
+    }
+    
+    [data-theme="dark"] .text-gray-800 {
+        color: #e5e7eb !important;
+    }
+</style>
+
+<script>
+function previewUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('upload-preview').src = e.target.result;
+            document.getElementById('upload-preview-container').classList.remove('hidden');
+        }
+        reader.readAsDataURL(file);
+    }
+}
+</script>
+
 {% endblock %}

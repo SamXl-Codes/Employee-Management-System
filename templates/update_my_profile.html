@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Update My Profile{% endblock %}
+
+{% block content %}
+<div class="mb-8 page-content">
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('employee_profile') }}" class="text-gray-600 hover:text-gray-900">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+        </a>
+        <h1 class="text-3xl font-semibold text-gray-900">Update My Profile</h1>
+    </div>
+    <p class="text-gray-600 mt-2">Update your personal information and change your password</p>
+</div>
+
+<div class="max-w-2xl">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mb-6">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="bg-white rounded-lg shadow form-animate">
+        <form method="POST" action="{{ url_for('update_my_profile') }}" enctype="multipart/form-data">
+            <div class="px-6 py-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Personal Information</h3>
+                <p class="text-sm text-gray-600 mt-1">You can update your contact information and profile picture</p>
+            </div>
+
+            <div class="px-6 py-6 space-y-6">
+                <!-- Profile Picture -->
+                <div>
+                    <label class="form-label">Profile Picture</label>
+                    <div class="flex items-center gap-4">
+                        <img src="{{ url_for('static', filename='images/profiles/' + (current_user.profile_image if current_user.profile_image else 'default-avatar.svg')) }}" 
+                             alt="{{ current_user.name }}" 
+                             class="w-20 h-20 rounded-full object-cover border-2 border-gray-200">
+                        <div class="flex-1">
+                            <input type="file" 
+                                   id="profile_image" 
+                                   name="profile_image" 
+                                   accept="image/*"
+                                   class="form-input">
+                            <p class="text-sm text-gray-500 mt-1">JPG, PNG or GIF (max 5MB)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phone Number -->
+                <div>
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input type="tel" 
+                           id="phone" 
+                           name="phone" 
+                           value="{{ current_user.phone }}"
+                           class="form-input" 
+                           placeholder="Enter your phone number">
+                </div>
+
+                <!-- Email (Display Only) -->
+                <div>
+                    <label class="form-label">Email Address</label>
+                    <input type="email" 
+                           value="{{ current_user.email }}"
+                           class="form-input bg-gray-100" 
+                           disabled>
+                    <p class="text-sm text-gray-500 mt-1">
+                        <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                        Contact IT Support to change your email address
+                    </p>
+                </div>
+            </div>
+
+            <div class="px-6 py-6 border-t border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Change Password</h3>
+                <p class="text-sm text-gray-600 mt-1">Leave blank if you don't want to change your password</p>
+            </div>
+
+            <div class="px-6 py-6 space-y-6">
+                <!-- Current Password -->
+                <div>
+                    <label for="current_password" class="form-label">Current Password</label>
+                    <input type="password" 
+                           id="current_password" 
+                           name="current_password" 
+                           class="form-input" 
+                           placeholder="Enter your current password">
+                    <p class="text-sm text-gray-500 mt-1">Required only if changing password</p>
+                </div>
+
+                <!-- New Password -->
+                <div>
+                    <label for="new_password" class="form-label">New Password</label>
+                    <input type="password" 
+                           id="new_password" 
+                           name="new_password" 
+                           class="form-input" 
+                           placeholder="Enter new password">
+                    <p class="text-sm text-gray-500 mt-1">At least 6 characters</p>
+                </div>
+
+                <!-- Confirm New Password -->
+                <div>
+                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                    <input type="password" 
+                           id="confirm_password" 
+                           name="confirm_password" 
+                           class="form-input" 
+                           placeholder="Confirm new password">
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50 flex justify-between items-center">
+                <a href="{{ url_for('employee_profile') }}" class="text-gray-600 hover:text-gray-900">
+                    Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Information Card -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+        <div class="flex gap-3">
+            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <p class="text-sm text-blue-700">
+                    <strong>Need to update other information?</strong><br>
+                    Contact IT Support at <a href="mailto:support@workflowx.com" class="underline font-medium">support@workflowx.com</a> to update:
+                </p>
+                <ul class="text-sm text-blue-700 mt-2 ml-4">
+                    <li>• Email address</li>
+                    <li>• Department or role changes</li>
+                    <li>• Personal details</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

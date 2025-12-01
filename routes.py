@@ -17,7 +17,8 @@ from app import app, db
 from models import User, Department, Role, Employee, Attendance, LeaveRequest, AuditLog
 import repository as repo
 import utils
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from dateutil.relativedelta import relativedelta
 from functools import wraps
 import csv
 import json
@@ -27,6 +28,33 @@ from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from werkzeug.utils import secure_filename
+import os
+import qrcode
+import io
+import base64
+import secrets
+
+# Global storage for QR tokens (in production, use Redis or database)
+qr_tokens = {}
+
+def get_or_create_qr_token(date_str):
+    """Get existing QR token for date or create new one. Auto-cleans old tokens."""
+    # Clean up expired tokens (older than today)
+    today = date.today().isoformat()
+    expired_dates = [d for d in list(qr_tokens.keys()) if d < today]
+    for expired_date in expired_dates:
+        del qr_tokens[expired_date]
+        print(f"[QR TOKEN] Auto-cleaned expired token for {expired_date}")
+    
+    # Return existing token or create new one
+    if date_str not in qr_tokens:
+        qr_tokens[date_str] = secrets.token_urlsafe(16)
+        print(f"[QR TOKEN] Auto-generated new token for {date_str}")
+    else:
+        print(f"[QR TOKEN] Reusing existing token for {date_str}")
+    
+    return qr_tokens[date_str]
 
 
 # ==================== EMAIL NOTIFICATIONS ====================
@@ -85,6 +113,32 @@ def log_audit(action, entity_type, entity_id=None, description=None):
         db.session.rollback()
 
 
+# ==================== FILE UPLOAD HELPERS ====================
+
+def allowed_file(filename):
+    """Check if file extension is allowed."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+
+def save_profile_image(file, employee_name):
+    """
+    Save uploaded profile image with secure filename.
+    Returns the filename if successful, None otherwise.
+    """
+    if file and allowed_file(file.filename):
+        # Create secure filename based on employee name
+        filename = secure_filename(f"{employee_name.lower().replace(' ', '-')}.{file.filename.rsplit('.', 1)[1].lower()}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        try:
+            file.save(filepath)
+            return filename
+        except Exception as e:
+            app.logger.error(f"Error saving profile image: {str(e)}")
+            return None
+    return None
+
+
 # ==================== AUTHENTICATION DECORATORS ====================
 
 def login_required(f):
@@ -129,17 +183,26 @@ def admin_required(f):
 
 @app.route('/')
 def index():
-    """Redirect to login or dashboard based on authentication."""
-    # Always check if session is valid and user exists
+    """Redirect to login or dashboard."""
+    # If user is logged in, go to dashboard
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
             return redirect(url_for('dashboard'))
         else:
-            # Invalid session, clear it
             session.clear()
     
+    # Go directly to login - skip loading screen
     return redirect(url_for('login'))
+    
+    return redirect(url_for('login'))
+
+
+@app.route('/set_loading_shown')
+def set_loading_shown():
+    """Mark loading screen as shown."""
+    session['loading_shown'] = True
+    return '', 204
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -150,12 +213,25 @@ def login():
     Week 2 Concept: if/elif/else for request method handling
     Week 9 Concept: Secure coding - password hashing
     """
+    print("LOGIN ROUTE CALLED")  # DEBUG
+    
+    # Save pending check-in data before clearing session
+    pending_token = session.get('pending_checkin_token')
+    pending_date = session.get('pending_checkin_date')
+    
     # Clear any existing session data before processing login
     if request.method == 'POST':
         session.clear()
+        # Restore pending check-in data
+        if pending_token and pending_date:
+            session['pending_checkin_token'] = pending_token
+            session['pending_checkin_date'] = pending_date
     
     # If already logged in (GET request), redirect to dashboard
     if 'user_id' in session and request.method == 'GET':
+        # Check if there's a pending check-in
+        if pending_token and pending_date:
+            return redirect(url_for('employee_qr_checkin', token=pending_token, date=pending_date))
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
@@ -178,6 +254,14 @@ def login():
             session['role'] = user.role
             
             flash(f'Welcome back, {user.username}!', 'success')
+            
+            # Check if user was trying to check in via QR code
+            if 'pending_checkin_token' in session and 'pending_checkin_date' in session:
+                token = session['pending_checkin_token']
+                checkin_date = session['pending_checkin_date']
+                # Redirect back to check-in page
+                return redirect(url_for('employee_qr_checkin', token=token, date=checkin_date))
+            
             return redirect(url_for('dashboard'))
         else:
             flash('Invalid username or password', 'danger')
@@ -247,16 +331,28 @@ def employees():
     Week 5 Concept: Lists to store and display data
     """
     search_term = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', 'active')  # 'active', 'inactive', or 'all'
     
     # Search or get all employees (Week 2: if/else)
     if search_term:
         employee_list = repo.search_employees(search_term)
+        # Apply status filter to search results
+        if status_filter == 'active':
+            employee_list = [emp for emp in employee_list if emp.status.lower() == 'active']
+        elif status_filter == 'inactive':
+            employee_list = [emp for emp in employee_list if emp.status.lower() == 'inactive']
     else:
-        employee_list = repo.get_all_employees(include_inactive=False)
+        if status_filter == 'inactive':
+            employee_list = Employee.query.filter_by(status='inactive').order_by(Employee.name).all()
+        elif status_filter == 'all':
+            employee_list = repo.get_all_employees(include_inactive=True)
+        else:
+            employee_list = repo.get_all_employees(include_inactive=False)
     
     return render_template('employees.html', 
                          employees=employee_list,
                          search_term=search_term,
+                         status_filter=status_filter,
                          user_role=session.get('role'))
 
 
@@ -312,6 +408,17 @@ def add_employee():
             flash('Invalid date format', 'danger')
             return redirect(url_for('add_employee'))
         
+        # Handle profile image upload
+        profile_image = 'default-avatar.svg'  # Default
+        if 'profile_image' in request.files:
+            file = request.files['profile_image']
+            if file and file.filename != '':
+                saved_filename = save_profile_image(file, name)
+                if saved_filename:
+                    profile_image = saved_filename
+                else:
+                    flash('Warning: Profile image could not be uploaded. Using default.', 'warning')
+        
         # Create employee (Week 7: database operations)
         success, message, employee = repo.create_employee(
             name=name,
@@ -322,6 +429,11 @@ def add_employee():
             salary=salary,
             date_joined=date_joined
         )
+        
+        # Update profile image if employee was created
+        if success and employee:
+            employee.profile_image = profile_image
+            db.session.commit()
         
         if success and employee:
             # Automatically create user account for the new employee
@@ -448,15 +560,31 @@ def delete_employee(employee_id):
     return redirect(url_for('employees'))
 
 
+@app.route('/employees/reactivate/<int:employee_id>', methods=['POST'])
+@admin_required
+def reactivate_employee(employee_id):
+    """Reactivate a deactivated employee."""
+    success, message = repo.reactivate_employee(employee_id)
+    
+    if success:
+        flash(message, 'success')
+    else:
+        flash(message, 'danger')
+    
+    return redirect(url_for('employees'))
+
+
 # ==================== DEPARTMENT ROUTES ====================
 
 @app.route('/departments')
 @login_required
 def departments():
-    """Display all departments."""
+    """Display all departments and roles."""
     department_list = repo.get_all_departments()
+    role_list = repo.get_all_roles()
     return render_template('departments.html', 
                          departments=department_list,
+                         roles=role_list,
                          user_role=session.get('role'))
 
 
@@ -521,11 +649,8 @@ def delete_department(department_id):
 @app.route('/roles')
 @login_required
 def roles():
-    """Display all roles."""
-    role_list = repo.get_all_roles()
-    return render_template('roles.html', 
-                         roles=role_list,
-                         user_role=session.get('role'))
+    """Redirect to departments page (roles are now integrated there)."""
+    return redirect(url_for('departments'))
 
 
 @app.route('/roles/add', methods=['POST'])
@@ -590,7 +715,7 @@ def delete_role(role_id):
 @login_required
 def attendance():
     """
-    Display attendance marking interface.
+    Display attendance marking interface with search and filter.
     
     Week 2 Concept: for loops to iterate over employees
     """
@@ -601,17 +726,55 @@ def attendance():
     if not attendance_date:
         attendance_date = date.today()
     
+    # Get search query
+    search_query = request.args.get('search', '').strip()
+    
     # Get all active employees
     employee_list = repo.get_all_employees()
+    
+    # Filter employees by search query if provided
+    if search_query:
+        # Try to parse employee ID (supports "WFX-0001", "0001", or "1")
+        employee_id_num = None
+        if search_query.upper().startswith('WFX-'):
+            try:
+                employee_id_num = int(search_query.upper().replace('WFX-', ''))
+            except ValueError:
+                pass
+        else:
+            try:
+                employee_id_num = int(search_query)
+            except ValueError:
+                pass
+        
+        employee_list = [emp for emp in employee_list 
+                        if search_query.lower() in emp.name.lower() or 
+                           search_query.lower() in emp.email.lower() or
+                           (employee_id_num is not None and emp.employee_id == employee_id_num)]
     
     # Get existing attendance for this date
     attendance_records = repo.get_attendance_by_date(attendance_date)
     attendance_map = {record.employee_id: record for record in attendance_records}
     
+    # Sort employees: those with attendance today (newest check-in first) appear at top
+    def sort_key(emp):
+        if emp.employee_id in attendance_map:
+            record = attendance_map[emp.employee_id]
+            # If checked in today, sort by check_in_time (newest first = negative timestamp)
+            if record.check_in_time:
+                return (0, -record.check_in_time.timestamp())
+            # If marked but not checked in, put after checked-in employees
+            return (1, emp.name.lower())
+        # Employees without attendance go last, sorted by name
+        return (2, emp.name.lower())
+    
+    employee_list.sort(key=sort_key)
+    
     return render_template('attendance.html',
                          employees=employee_list,
                          attendance_map=attendance_map,
                          selected_date=attendance_date,
+                         search_query=search_query,
                          user_role=session.get('role'))
 
 
@@ -691,8 +854,15 @@ def add_leave_request():
             flash(error_msg, 'danger')
             return redirect(url_for('add_leave_request'))
         
-        # For demo, use first employee (in real app, would use logged-in employee)
-        employee_id = 1  # This should be session['employee_id'] in production
+        # Get the logged-in user's employee record
+        user = repo.get_user_by_id(session['user_id'])
+        emp = Employee.query.filter_by(email=user.username).first()
+        
+        if not emp:
+            flash('Employee profile not found. Please contact HR.', 'danger')
+            return redirect(url_for('employee_dashboard'))
+        
+        employee_id = emp.employee_id
         
         success, message, _ = repo.create_leave_request(
             employee_id, start_date, end_date, leave_type, reason
@@ -791,6 +961,27 @@ def reports():
                          start_date=start_date,
                          end_date=end_date,
                          selected_department=department_id)
+
+
+@app.route('/admin/settings')
+@login_required
+def admin_settings():
+    """Admin settings page - REAL administrative control center with actual power."""
+    if session.get('role') != 'admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Get real-time statistics for admin dashboard
+    stats = {
+        'total_employees': Employee.query.filter_by(status='active').count(),
+        'active_today': Attendance.query.filter_by(date=date.today()).count(),
+        'pending_leaves': LeaveRequest.query.filter_by(status='Pending').count(),
+        'total_departments': Department.query.count()
+    }
+    
+    return render_template('admin_settings_v6.html', user=user, stats=stats)
 
 
 def generate_attendance_summary_report(start_date=None, end_date=None, department_id=None):
@@ -1718,15 +1909,115 @@ def employee_dashboard():
 
 @app.route('/employee/profile')
 @login_required
-def my_profile():
+def employee_profile():
     """View employee's own profile."""
     user = repo.get_user_by_id(session['user_id'])
-    emp = Employee.query.filter_by(email=user.username + '@company.com').first()
     
+    # Try to find employee by exact email match
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    # If not found, try with @company.com or @workflowx.com
     if not emp:
-        emp = Employee.query.first()
+        emp = Employee.query.filter(
+            (Employee.email == user.username + '@company.com') |
+            (Employee.email == user.username + '@workflowx.com')
+        ).first()
+    
+    # If still not found, show error
+    if not emp:
+        flash('Your employee profile is not linked to this account. Please contact HR.', 'danger')
+        return redirect(url_for('logout'))
     
     return render_template('employee_profile.html', current_user=emp)
+
+
+@app.route('/employee/profile/update', methods=['GET', 'POST'])
+@login_required
+def update_my_profile():
+    """Allow employees to update their own profile information."""
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Try to find employee by exact email match
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    # If not found, try with @company.com or @workflowx.com
+    if not emp:
+        emp = Employee.query.filter(
+            (Employee.email == user.username + '@company.com') |
+            (Employee.email == user.username + '@workflowx.com')
+        ).first()
+    
+    if not emp:
+        flash('Your employee profile is not linked to this account. Please contact HR.', 'danger')
+        return redirect(url_for('logout'))
+    
+    if request.method == 'POST':
+        try:
+            # Update phone number
+            phone = request.form.get('phone', '').strip()
+            if phone:
+                emp.phone = phone
+            
+            # Handle profile picture upload
+            if 'profile_image' in request.files:
+                file = request.files['profile_image']
+                if file and file.filename and allowed_file(file.filename):
+                    # Save the file
+                    filename = save_profile_image(file, emp.first_name + ' ' + emp.last_name)
+                    if filename:
+                        emp.profile_image = filename
+            
+            # Handle password change
+            current_password = request.form.get('current_password', '').strip()
+            new_password = request.form.get('new_password', '').strip()
+            confirm_password = request.form.get('confirm_password', '').strip()
+            
+            if new_password or current_password:
+                # Validate current password
+                if not current_password:
+                    flash('Please enter your current password to change it', 'danger')
+                    return redirect(url_for('update_my_profile'))
+                
+                if not user.check_password(current_password):
+                    flash('Current password is incorrect', 'danger')
+                    return redirect(url_for('update_my_profile'))
+                
+                # Validate new password
+                if not new_password:
+                    flash('Please enter a new password', 'danger')
+                    return redirect(url_for('update_my_profile'))
+                
+                if len(new_password) < 6:
+                    flash('New password must be at least 6 characters', 'danger')
+                    return redirect(url_for('update_my_profile'))
+                
+                if new_password != confirm_password:
+                    flash('New passwords do not match', 'danger')
+                    return redirect(url_for('update_my_profile'))
+                
+                # Update password
+                user.set_password(new_password)
+                db.session.add(user)
+                
+                # Log password change
+                log_audit('UPDATE', 'User', user.user_id, 'Password changed by employee')
+            
+            # Save changes
+            db.session.add(emp)
+            db.session.commit()
+            
+            # Log the update
+            log_audit('UPDATE', 'Employee', emp.employee_id, 'Profile updated by employee')
+            
+            flash('Your profile has been updated successfully!', 'success')
+            return redirect(url_for('employee_profile'))
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error updating employee profile: {str(e)}")
+            flash('An error occurred while updating your profile. Please try again.', 'danger')
+    
+    return render_template('update_my_profile.html', current_user=emp)
 
 
 @app.route('/employee/leave-history')
@@ -1734,16 +2025,86 @@ def my_profile():
 def my_leave_history():
     """View employee's leave request history."""
     user = repo.get_user_by_id(session['user_id'])
-    emp = Employee.query.filter_by(email=user.username + '@company.com').first()
     
+    # Try to find employee by exact email match
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    # If not found, try with @company.com or @workflowx.com
     if not emp:
-        emp = Employee.query.first()
+        emp = Employee.query.filter(
+            (Employee.email == user.username + '@company.com') |
+            (Employee.email == user.username + '@workflowx.com')
+        ).first()
+    
+    # If still not found, show error
+    if not emp:
+        flash('Your employee profile is not linked to this account. Please contact HR.', 'danger')
+        return redirect(url_for('logout'))
     
     leave_requests = LeaveRequest.query.filter_by(
         employee_id=emp.employee_id
     ).order_by(LeaveRequest.submitted_at.desc()).all()
     
-    return render_template('employee_leave_history.html', leave_requests=leave_requests)
+    return render_template('employee_leave_history.html', leave_requests=leave_requests, current_user=emp)
+
+
+@app.route('/employee/settings')
+@login_required
+def employee_settings():
+    """Employee settings page - appearance, notifications, profile preferences."""
+    if session.get('role') != 'employee':
+        flash('Access denied', 'danger')
+        return redirect(url_for('employee_dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    if not emp:
+        emp = Employee.query.filter_by(email=user.username + '@company.com').first()
+    
+    if not emp:
+        flash('Employee profile not found', 'danger')
+        return redirect(url_for('logout'))
+    
+    return render_template('employee_settings.html', user=user, employee=emp)
+
+
+@app.route('/employee/upload-photo', methods=['POST'])
+@login_required
+def upload_employee_photo():
+    """Allow employee to upload their own profile photo."""
+    user = repo.get_user_by_id(session['user_id'])
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    if not emp:
+        emp = Employee.query.filter_by(email=user.username + '@company.com').first()
+    
+    if not emp:
+        flash('Employee profile not found', 'danger')
+        return redirect(url_for('employee_dashboard'))
+    
+    if 'profile_image' not in request.files:
+        flash('No file selected', 'danger')
+        return redirect(request.referrer or url_for('employee_dashboard'))
+    
+    file = request.files['profile_image']
+    
+    if file.filename == '':
+        flash('No file selected', 'danger')
+        return redirect(request.referrer or url_for('employee_dashboard'))
+    
+    if file and allowed_file(file.filename):
+        saved_filename = save_profile_image(file, emp.name)
+        if saved_filename:
+            emp.profile_image = saved_filename
+            db.session.commit()
+            flash('✅ Profile photo updated successfully!', 'success')
+        else:
+            flash('❌ Error uploading photo. Please try again.', 'danger')
+    else:
+        flash('Invalid file type. Please upload JPG, PNG, or GIF only.', 'danger')
+    
+    return redirect(request.referrer or url_for('employee_dashboard'))
 
 
 @app.route('/employee/attendance')
@@ -1751,10 +2112,22 @@ def my_leave_history():
 def my_attendance():
     """View employee's attendance records."""
     user = repo.get_user_by_id(session['user_id'])
-    emp = Employee.query.filter_by(email=user.username + '@company.com').first()
     
+    # Try to find employee by exact username match
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    # If not found, try with common email domains
     if not emp:
-        emp = Employee.query.first()
+        emp = Employee.query.filter(
+            (Employee.email == user.username + '@company.com') |
+            (Employee.email == user.username + '@workflowx.com') |
+            (Employee.email.like(f'%{user.username}%'))
+        ).first()
+    
+    # CRITICAL: Never fall back to another employee's data!
+    if not emp:
+        flash('Your employee profile could not be found. Please contact HR to link your account.', 'danger')
+        return redirect(url_for('employee_dashboard'))
     
     attendance_records = Attendance.query.filter_by(
         employee_id=emp.employee_id
@@ -1771,6 +2144,968 @@ def my_attendance():
                          present_days=present_days,
                          absent_days=absent_days,
                          late_days=late_days)
+
+
+# ==================== QR CODE ATTENDANCE CHECK-IN ====================
+
+@app.route('/admin/qr-checkin')
+@login_required
+def admin_qr_checkin():
+    """Display QR code for employee attendance check-in (Admin/HR view)."""
+    if session.get('role') != 'admin':
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Automatically ensure token exists for today
+    today = date.today().isoformat()
+    token = get_or_create_qr_token(today)
+    print(f"[QR PAGE] Using token for {today}")
+    
+    # Create check-in URL with network IP (not localhost)
+    # Force use of network IP so it works on mobile devices
+    network_ip = "192.168.1.71:8080"
+    checkin_url = f"http://{network_ip}/checkin/{token}?date={today}"
+    
+    # Generate QR code
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(checkin_url)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64 for embedding in HTML
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
+    return render_template('admin_qr_checkin.html',
+                         qr_code=qr_code_base64,
+                         checkin_url=checkin_url,
+                         today=today)
+
+
+@app.route('/checkin/<token>')
+def employee_qr_checkin(token):
+    """Handle QR code scan and redirect to login if needed, then to check-in page."""
+    checkin_date = request.args.get('date')
+    print(f"[QR PAGE] Accessed with token: {token}, date: {checkin_date}, user_id: {session.get('user_id')}")
+    
+    if not checkin_date:
+        flash('Invalid check-in link', 'danger')
+        return redirect(url_for('login'))
+    
+    # Store token and date in session for later verification
+    session['pending_checkin_token'] = token
+    session['pending_checkin_date'] = checkin_date
+    
+    # Check if user is logged in
+    if 'user_id' not in session:
+        flash('Please login to check in', 'info')
+        return redirect(url_for('login'))
+    
+    # Check if logged in user is an employee
+    if session.get('role') != 'employee':
+        flash('Only employees can use QR check-in', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Check if date matches today (QR code expires after 24 hours)
+    today_date = date.today().isoformat()
+    if checkin_date != today_date:
+        flash('This QR code has expired. It was valid for a different day.', 'warning')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Verify token exists and matches (don't auto-generate, just verify)
+    stored_token = qr_tokens.get(checkin_date)
+    if not stored_token:
+        # Token doesn't exist - admin needs to generate QR code
+        flash('No valid QR code found for today. Please ask admin to generate the QR code.', 'warning')
+        return redirect(url_for('employee_dashboard'))
+    
+    if stored_token != token:
+        flash('Invalid check-in link. This QR code is not valid.', 'danger')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Get employee information
+    user = repo.get_user_by_id(session['user_id'])
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    if not emp:
+        emp = Employee.query.filter(
+            (Employee.email == user.username + '@company.com') |
+            (Employee.email == user.username + '@workflowx.com')
+        ).first()
+    
+    # Check if employee has already checked in today
+    today = date.today()
+    existing_attendance = None
+    if emp:
+        existing_attendance = Attendance.query.filter_by(
+            employee_id=emp.employee_id,
+            date=today
+        ).first()
+        
+        if existing_attendance:
+            print(f"[QR PAGE] Found attendance: check_in_time={existing_attendance.check_in_time}, check_out_time={existing_attendance.check_out_time}")
+        else:
+            print(f"[QR PAGE] No attendance record found for today")
+    
+    # User is logged in and token is valid, show check-in/check-out page
+    return render_template('employee_qr_checkin.html',
+                         token=token,
+                         checkin_date=checkin_date,
+                         attendance=existing_attendance,
+                         employee=emp)
+
+
+@app.route('/checkin/submit', methods=['POST'])
+@login_required
+def submit_qr_checkin():
+    """Process employee check-in from QR code scan."""
+    print(f"[QR CHECK-IN] Received submission from user: {session.get('user_id')}, role: {session.get('role')}")
+    
+    if session.get('role') != 'employee':
+        flash('This feature is only available for employees', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    token = request.form.get('token')
+    checkin_date_str = request.form.get('date')
+    print(f"[QR CHECK-IN] Token: {token}, Date: {checkin_date_str}")
+    
+    if not token or not checkin_date_str:
+        flash('Invalid check-in data', 'danger')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Verify date is today
+    if checkin_date_str != date.today().isoformat():
+        flash('This QR code has expired. It was valid for a different day.', 'warning')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Token was already validated when the page loaded (in employee_qr_checkin route)
+    # No need to validate again here - just process the check-in
+    
+    try:
+        checkin_date = datetime.strptime(checkin_date_str, '%Y-%m-%d').date()
+        
+        # Get employee
+        user = repo.get_user_by_id(session['user_id'])
+        emp = Employee.query.filter_by(email=user.username).first()
+        
+        if not emp:
+            emp = Employee.query.filter(
+                (Employee.email == user.username + '@company.com') |
+                (Employee.email == user.username + '@workflowx.com')
+            ).first()
+        
+        if not emp:
+            flash('Employee profile not found', 'danger')
+            return redirect(url_for('employee_dashboard'))
+        
+        # Check if already checked in today (with actual check_in_time)
+        existing = Attendance.query.filter_by(
+            employee_id=emp.employee_id,
+            date=checkin_date
+        ).first()
+        
+        if existing and existing.check_in_time:
+            flash(f'You have already checked in today at {existing.check_in_time.strftime("%I:%M %p")}', 'info')
+            return redirect(f'/checkin/{token}?date={checkin_date_str}')
+        
+        # If there's an old record without check_in_time, delete it
+        if existing and not existing.check_in_time:
+            db.session.delete(existing)
+            db.session.commit()
+        
+        # Determine status based on time
+        now = datetime.now()
+        check_in_time = now.time()
+        
+        # Define late cutoff time (9:20 AM as per template)
+        late_cutoff_time = datetime.strptime('09:20', '%H:%M').time()
+        
+        if check_in_time < late_cutoff_time:
+            status = 'Present'
+        else:
+            status = 'Late'
+        
+        # Create attendance record
+        attendance = Attendance(
+            employee_id=emp.employee_id,
+            date=checkin_date,
+            status=status,
+            check_in_time=now,
+            notes=''
+        )
+        
+        db.session.add(attendance)
+        db.session.commit()
+        
+        # Log the action
+        log_audit('CREATE', 'Attendance', attendance.attendance_id, 
+                 f'Employee {emp.first_name} {emp.last_name} checked in via QR code - {status}')
+        
+        flash(f'Check-in successful! Status: {status} at {check_in_time.strftime("%I:%M %p")}', 'success')
+        
+        # Redirect back to QR page to show check-out option
+        return redirect(f'/checkin/{token}?date={checkin_date_str}')
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error processing QR check-in: {str(e)}")
+        flash('An error occurred during check-in. Please contact HR.', 'danger')
+        return redirect(url_for('employee_dashboard'))
+
+
+# REMOVED: Manual check-in feature removed for security reasons
+# Employees must physically scan QR code at office to verify presence
+# @app.route('/employee/manual-checkin')
+# @login_required
+# def manual_checkin():
+#     """Allow employees to manually check in if they can't scan QR code."""
+#     if session.get('role') != 'employee':
+#         flash('This feature is only available for employees', 'danger')
+#         return redirect(url_for('dashboard'))
+#     
+#     return render_template('manual_checkin.html')
+
+
+# REMOVED: Manual check-in submit route removed for security reasons
+# Employees must physically be at office to scan QR code
+# @app.route('/employee/manual-checkin/submit', methods=['POST'])
+# @login_required
+# def submit_manual_checkin():
+#     """Process manual check-in (similar to QR but without token verification)."""
+#     # This feature was removed because employees could check in from anywhere
+#     # without actually being present in the office
+#     pass
+
+
+@app.route('/employee/checkout', methods=['POST'])
+@login_required
+def employee_checkout():
+    """Process employee check-out."""
+    if session.get('role') != 'employee':
+        flash('This feature is only available for employees', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        today = date.today()
+        
+        # Get employee
+        user = repo.get_user_by_id(session['user_id'])
+        emp = Employee.query.filter_by(email=user.username).first()
+        
+        if not emp:
+            emp = Employee.query.filter(
+                (Employee.email == user.username + '@company.com') |
+                (Employee.email == user.username + '@workflowx.com')
+            ).first()
+        
+        if not emp:
+            flash('Employee profile not found', 'danger')
+            return redirect(url_for('employee_dashboard'))
+        
+        # Find today's attendance record
+        attendance = Attendance.query.filter_by(
+            employee_id=emp.employee_id,
+            date=today
+        ).first()
+        
+        if not attendance:
+            flash('No check-in record found for today. Please check in first.', 'warning')
+            return redirect(url_for('employee_dashboard'))
+        
+        if attendance.check_out_time:
+            flash(f'You have already checked out today at {attendance.check_out_time.strftime("%I:%M %p")}', 'info')
+            return redirect(url_for('employee_dashboard'))
+        
+        # Record check-out time
+        now = datetime.now()
+        attendance.check_out_time = now
+        
+        # Calculate hours worked
+        hours_worked = attendance.calculate_hours_worked()
+        
+        # Update notes to remove QR code text and add simple summary
+        attendance.notes = f'Checked in: {attendance.check_in_time.strftime("%I:%M %p")} | Checked out: {now.strftime("%I:%M %p")} | Hours: {hours_worked}h'
+        
+        db.session.commit()
+        
+        # Log the action
+        log_audit('UPDATE', 'Attendance', attendance.attendance_id, 
+                 f'Employee {emp.first_name} {emp.last_name} checked out - {hours_worked}h worked')
+        
+        flash(f'Check-out successful at {now.strftime("%I:%M %p")}! Hours worked: {hours_worked}h', 'success')
+        
+        # If coming from QR flow, redirect back to QR page to show completion
+        if request.form.get('from_qr') == 'true':
+            token = request.form.get('token')
+            checkin_date = request.form.get('date')
+            if token and checkin_date:
+                return redirect(f'/checkin/{token}?date={checkin_date}')
+        
+        return redirect(url_for('employee_dashboard'))
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error processing check-out: {str(e)}")
+        flash('An error occurred during check-out. Please contact HR.', 'danger')
+        return redirect(url_for('employee_dashboard'))
+
+
+# ==================== PAYROLL MANAGEMENT ROUTES ====================
+
+@app.route('/payroll')
+@login_required
+def payroll_dashboard():
+    """Display payroll dashboard."""
+    from models import Payroll
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Get all payroll records
+    payrolls = Payroll.query.order_by(Payroll.pay_period_end.desc()).all()
+    
+    # Calculate stats
+    total_paid = sum(float(p.net_salary) for p in payrolls if p.payment_status == 'paid')
+    pending_count = len([p for p in payrolls if p.payment_status == 'pending'])
+    
+    return render_template('payroll_dashboard.html', 
+                         user=user, 
+                         payrolls=payrolls,
+                         total_paid=total_paid,
+                         pending_count=pending_count)
+
+
+@app.route('/payroll/generate', methods=['GET', 'POST'])
+@login_required
+def generate_payroll():
+    """Generate payroll for selected month."""
+    from models import Payroll, Deduction
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        month = int(request.form.get('month'))
+        year = int(request.form.get('year'))
+        
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        
+        # Get all active employees
+        employees = Employee.query.filter_by(status='active').all()
+        
+        generated_count = 0
+        for emp in employees:
+            if emp.salary:
+                # Create pay period
+                start_date = date(year, month, 1)
+                if month == 12:
+                    end_date = date(year + 1, 1, 1) - relativedelta(days=1)
+                else:
+                    end_date = date(year, month + 1, 1) - relativedelta(days=1)
+                
+                # Check if payroll already exists
+                existing = Payroll.query.filter_by(
+                    employee_id=emp.employee_id,
+                    pay_period_start=start_date,
+                    pay_period_end=end_date
+                ).first()
+                
+                if not existing:
+                    payroll = Payroll(
+                        employee_id=emp.employee_id,
+                        pay_period_start=start_date,
+                        pay_period_end=end_date,
+                        gross_salary=emp.salary
+                    )
+                    
+                    # Add statutory deductions (example: 10% tax, 5% insurance)
+                    tax_amount = float(emp.salary) * 0.10
+                    insurance_amount = float(emp.salary) * 0.05
+                    
+                    db.session.add(payroll)
+                    db.session.flush()  # Get payroll_id
+                    
+                    tax_deduction = Deduction(
+                        payroll_id=payroll.payroll_id,
+                        deduction_type='tax',
+                        deduction_name='Income Tax',
+                        amount=tax_amount,
+                        percentage=10.0,
+                        is_statutory=True
+                    )
+                    
+                    insurance_deduction = Deduction(
+                        payroll_id=payroll.payroll_id,
+                        deduction_type='insurance',
+                        deduction_name='Health Insurance',
+                        amount=insurance_amount,
+                        percentage=5.0,
+                        is_statutory=True
+                    )
+                    
+                    db.session.add(tax_deduction)
+                    db.session.add(insurance_deduction)
+                    
+                    payroll.add_deduction(tax_amount)
+                    payroll.add_deduction(insurance_amount)
+                    
+                    generated_count += 1
+        
+        db.session.commit()
+        
+        repo.log_action(
+            user_id=session['user_id'],
+            action='generate_payroll',
+            entity_type='payroll',
+            description=f'Generated payroll for {month}/{year} ({generated_count} records)'
+        )
+        
+        flash(f'Successfully generated {generated_count} payroll records for {month}/{year}', 'success')
+        return redirect(url_for('payroll_dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    return render_template('payroll_generate.html', user=user)
+
+
+@app.route('/payroll/payslip/<int:payroll_id>')
+@login_required
+def view_payslip(payroll_id):
+    """View detailed payslip."""
+    from models import Payroll
+    payroll = Payroll.query.get_or_404(payroll_id)
+    
+    # Check permissions
+    if session.get('role') != 'admin':
+        # Employees can only view their own payslips
+        employee = Employee.query.filter_by(
+            employee_id=payroll.employee_id
+        ).first()
+        if not employee or employee.email != session.get('username'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    employee = Employee.query.get(payroll.employee_id)
+    
+    return render_template('payslip_view.html', 
+                         user=user, 
+                         payroll=payroll, 
+                         employee=employee)
+
+
+@app.route('/payroll/employee/<int:employee_id>')
+@login_required
+def salary_history(employee_id):
+    """View salary history for employee."""
+    from models import Payroll
+    employee = Employee.query.get_or_404(employee_id)
+    
+    # Check permissions
+    if session.get('role') != 'admin' and employee.email != session.get('username'):
+        flash('Access denied.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    payrolls = Payroll.query.filter_by(employee_id=employee_id).order_by(Payroll.pay_period_end.desc()).all()
+    
+    return render_template('salary_history.html', 
+                         user=user, 
+                         employee=employee, 
+                         payrolls=payrolls)
+
+
+@app.route('/payroll/mark_paid/<int:payroll_id>', methods=['POST'])
+@login_required
+def mark_payroll_paid(payroll_id):
+    """Mark payroll as paid."""
+    from models import Payroll
+    if session.get('role') != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    payroll = Payroll.query.get_or_404(payroll_id)
+    payroll.mark_as_paid()
+    db.session.commit()
+    
+    repo.log_action(
+        user_id=session['user_id'],
+        action='mark_paid',
+        entity_type='payroll',
+        entity_id=payroll_id,
+        description=f'Marked payroll {payroll_id} as paid'
+    )
+    
+    flash('Payroll marked as paid', 'success')
+    return redirect(url_for('payroll_dashboard'))
+
+
+# ==================== PERFORMANCE MANAGEMENT ROUTES ====================
+
+@app.route('/performance/reviews')
+@login_required
+def performance_reviews():
+    """Display all performance reviews."""
+    from models import PerformanceReview
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    reviews = PerformanceReview.query.order_by(PerformanceReview.created_at.desc()).all()
+    
+    return render_template('reviews_list.html', user=user, reviews=reviews)
+
+
+@app.route('/performance/review/select-employee')
+@login_required
+def select_employee_for_review():
+    """Select employee to create performance review."""
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    employees = repo.get_all_employees()
+    
+    return render_template('select_employee_review.html', user=user, employees=employees)
+
+
+@app.route('/performance/review/create/<int:employee_id>', methods=['GET', 'POST'])
+@login_required
+def create_review(employee_id):
+    """Create performance review."""
+    from models import PerformanceReview
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    employee = Employee.query.get_or_404(employee_id)
+    
+    if request.method == 'POST':
+        from datetime import datetime
+        
+        review = PerformanceReview(
+            employee_id=employee_id,
+            reviewer_id=session['user_id'],
+            review_period_start=datetime.strptime(request.form.get('period_start'), '%Y-%m-%d').date(),
+            review_period_end=datetime.strptime(request.form.get('period_end'), '%Y-%m-%d').date()
+        )
+        
+        review.overall_rating = int(request.form.get('rating', 0))
+        review.strengths = request.form.get('strengths')
+        review.areas_for_improvement = request.form.get('improvements')
+        review.goals_met = request.form.get('goals_met') == 'on'
+        review.comments = request.form.get('comments')
+        review.status = 'submitted'
+        
+        db.session.add(review)
+        db.session.commit()
+        
+        repo.log_action(
+            user_id=session['user_id'],
+            action='create_review',
+            entity_type='performance_review',
+            entity_id=review.review_id,
+            description=f'Created performance review for employee {employee.name}'
+        )
+        
+        flash('Performance review created successfully', 'success')
+        return redirect(url_for('performance_reviews'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    return render_template('review_form.html', user=user, employee=employee)
+
+
+@app.route('/performance/review/view/<int:review_id>')
+@login_required
+def view_review(review_id):
+    """View a specific performance review."""
+    from models import PerformanceReview
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    review = PerformanceReview.query.get_or_404(review_id)
+    user = repo.get_user_by_id(session['user_id'])
+    
+    return render_template('review_detail.html', user=user, review=review)
+
+
+@app.route('/performance/goals')
+@login_required
+def goals_dashboard():
+    """Display goals dashboard."""
+    from models import Goal
+    user = repo.get_user_by_id(session['user_id'])
+    
+    if session.get('role') == 'admin':
+        goals = Goal.query.order_by(Goal.target_date.desc()).all()
+    else:
+        # Employees see only their goals
+        employee = Employee.query.filter_by(email=session.get('username')).first()
+        if employee:
+            goals = Goal.query.filter_by(employee_id=employee.employee_id).all()
+        else:
+            goals = []
+    
+    return render_template('goals_dashboard.html', user=user, goals=goals)
+
+
+@app.route('/performance/goal/create', methods=['GET', 'POST'])
+@login_required
+def create_goal():
+    """Create new goal."""
+    from models import Goal
+    
+    if request.method == 'POST':
+        employee_id = int(request.form.get('employee_id'))
+        
+        # Check permissions
+        if session.get('role') != 'admin':
+            employee = Employee.query.filter_by(email=session.get('username')).first()
+            if not employee or employee.employee_id != employee_id:
+                flash('Access denied.', 'danger')
+                return redirect(url_for('dashboard'))
+        
+        from datetime import datetime
+        
+        goal = Goal(
+            employee_id=employee_id,
+            goal_title=request.form.get('title'),
+            description=request.form.get('description'),
+            target_date=datetime.strptime(request.form.get('target_date'), '%Y-%m-%d').date() if request.form.get('target_date') else None,
+            priority=request.form.get('priority', 'medium'),
+            created_by=session['user_id']
+        )
+        
+        db.session.add(goal)
+        db.session.commit()
+        
+        repo.log_action(
+            user_id=session['user_id'],
+            action='create_goal',
+            entity_type='goal',
+            entity_id=goal.goal_id,
+            description=f'Created goal: {goal.goal_title}'
+        )
+        
+        flash('Goal created successfully', 'success')
+        return redirect(url_for('goals_dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    employees = Employee.query.filter_by(status='active').all()
+    return render_template('goal_form.html', user=user, employees=employees)
+
+
+@app.route('/performance/goal/update/<int:goal_id>', methods=['POST'])
+@login_required
+def update_goal_progress(goal_id):
+    """Update goal progress."""
+    from models import Goal
+    goal = Goal.query.get_or_404(goal_id)
+    
+    progress = int(request.form.get('progress', 0))
+    goal.update_progress(progress)
+    db.session.commit()
+    
+    flash('Goal progress updated', 'success')
+    return redirect(url_for('goals_dashboard'))
+
+
+@app.route('/performance/feedback/submit', methods=['GET', 'POST'])
+@login_required
+def submit_feedback():
+    """Submit 360-degree feedback."""
+    from models import Feedback
+    
+    if request.method == 'POST':
+        employee_id = int(request.form.get('employee_id'))
+        
+        feedback = Feedback(
+            employee_id=employee_id,
+            from_user_id=session['user_id'],
+            feedback_type=request.form.get('feedback_type'),
+            rating=int(request.form.get('rating', 0)) if request.form.get('rating') else None,
+            comments=request.form.get('comments'),
+            is_anonymous=request.form.get('is_anonymous') == 'on'
+        )
+        
+        db.session.add(feedback)
+        db.session.commit()
+        
+        repo.log_action(
+            user_id=session['user_id'],
+            action='submit_feedback',
+            entity_type='feedback',
+            entity_id=feedback.feedback_id,
+            description=f'Submitted {feedback.feedback_type} feedback'
+        )
+        
+        flash('Feedback submitted successfully', 'success')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    employees = Employee.query.filter_by(status='active').all()
+    return render_template('feedback_form.html', user=user, employees=employees)
+
+
+# ==================== RECRUITMENT & ONBOARDING ROUTES ====================
+
+@app.route('/recruitment')
+@login_required
+def recruitment_pipeline():
+    """Display recruitment pipeline."""
+    from models import Recruitment
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Get candidates by status
+    candidates = Recruitment.query.order_by(Recruitment.application_date.desc()).all()
+    
+    # Group by status
+    by_status = {
+        'applied': [c for c in candidates if c.status == 'applied'],
+        'screening': [c for c in candidates if c.status == 'screening'],
+        'interview': [c for c in candidates if c.status == 'interview'],
+        'offer': [c for c in candidates if c.status == 'offer'],
+        'hired': [c for c in candidates if c.status == 'hired'],
+        'rejected': [c for c in candidates if c.status == 'rejected']
+    }
+    
+    return render_template('recruitment_pipeline.html', user=user, by_status=by_status)
+
+
+@app.route('/recruitment/candidate/add', methods=['GET', 'POST'])
+@login_required
+def add_candidate():
+    """Add new candidate."""
+    from models import Recruitment
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        candidate = Recruitment(
+            candidate_name=request.form.get('name'),
+            email=request.form.get('email'),
+            phone=request.form.get('phone'),
+            position_applied=request.form.get('position'),
+            department_id=int(request.form.get('department_id')) if request.form.get('department_id') else None
+        )
+        
+        candidate.notes = request.form.get('notes')
+        
+        db.session.add(candidate)
+        db.session.commit()
+        
+        repo.log_action(
+            user_id=session['user_id'],
+            action='add_candidate',
+            entity_type='recruitment',
+            entity_id=candidate.recruitment_id,
+            description=f'Added candidate: {candidate.candidate_name}'
+        )
+        
+        flash('Candidate added successfully', 'success')
+        return redirect(url_for('recruitment_pipeline'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    departments = Department.query.all()
+    return render_template('candidate_form.html', user=user, departments=departments)
+
+
+@app.route('/recruitment/candidate/<int:recruitment_id>/update_status', methods=['POST'])
+@login_required
+def update_candidate_status(recruitment_id):
+    """Update candidate status."""
+    from models import Recruitment
+    if session.get('role') != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    candidate = Recruitment.query.get_or_404(recruitment_id)
+    new_status = request.form.get('status')
+    
+    candidate.update_status(new_status)
+    db.session.commit()
+    
+    repo.log_action(
+        user_id=session['user_id'],
+        action='update_candidate',
+        entity_type='recruitment',
+        entity_id=recruitment_id,
+        description=f'Updated candidate status to {new_status}'
+    )
+    
+    flash('Candidate status updated', 'success')
+    return redirect(url_for('recruitment_pipeline'))
+
+
+@app.route('/onboarding/tasks/<int:employee_id>')
+@login_required
+def onboarding_tasks(employee_id):
+    """View onboarding tasks for employee."""
+    from models import OnboardingTask
+    employee = Employee.query.get_or_404(employee_id)
+    
+    # Check permissions
+    if session.get('role') != 'admin' and employee.email != session.get('username'):
+        flash('Access denied.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    tasks = OnboardingTask.query.filter_by(employee_id=employee_id).order_by(OnboardingTask.due_date).all()
+    
+    return render_template('onboarding_tasks.html', user=user, employee=employee, tasks=tasks)
+
+
+@app.route('/onboarding/task/create/<int:employee_id>', methods=['POST'])
+@login_required
+def create_onboarding_task(employee_id):
+    """Create onboarding task."""
+    from models import OnboardingTask
+    if session.get('role') != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    from datetime import datetime
+    
+    task = OnboardingTask(
+        employee_id=employee_id,
+        task_title=request.form.get('title'),
+        description=request.form.get('description'),
+        due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date() if request.form.get('due_date') else None,
+        priority=request.form.get('priority', 'medium'),
+        assigned_to=int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None
+    )
+    
+    db.session.add(task)
+    db.session.commit()
+    
+    flash('Onboarding task created', 'success')
+    return redirect(url_for('onboarding_tasks', employee_id=employee_id))
+
+
+@app.route('/onboarding/task/complete/<int:task_id>', methods=['POST'])
+@login_required
+def complete_onboarding_task(task_id):
+    """Mark onboarding task as completed."""
+    from models import OnboardingTask
+    task = OnboardingTask.query.get_or_404(task_id)
+    
+    task.mark_completed()
+    db.session.commit()
+    
+    flash('Task marked as completed', 'success')
+    return redirect(url_for('onboarding_tasks', employee_id=task.employee_id))
+
+
+# ==================== SCHEDULING ROUTES ====================
+
+@app.route('/schedule')
+@login_required
+def schedule_calendar():
+    """Display schedule calendar."""
+    from models import Schedule
+    user = repo.get_user_by_id(session['user_id'])
+    
+    if session.get('role') == 'admin':
+        schedules = Schedule.query.filter(Schedule.schedule_date >= date.today()).order_by(Schedule.schedule_date).all()
+    else:
+        # Employees see only their schedules
+        employee = Employee.query.filter_by(email=session.get('username')).first()
+        if employee:
+            schedules = Schedule.query.filter_by(employee_id=employee.employee_id).filter(
+                Schedule.schedule_date >= date.today()
+            ).order_by(Schedule.schedule_date).all()
+        else:
+            schedules = []
+    
+    return render_template('schedule_calendar.html', user=user, schedules=schedules)
+
+
+@app.route('/schedule/create', methods=['GET', 'POST'])
+@login_required
+def create_schedule():
+    """Create new schedule."""
+    from models import Schedule, Shift
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        from datetime import datetime
+        
+        employee_id = int(request.form.get('employee_id'))
+        shift_id = int(request.form.get('shift_id')) if request.form.get('shift_id') else None
+        
+        schedule = Schedule(
+            employee_id=employee_id,
+            schedule_date=datetime.strptime(request.form.get('date'), '%Y-%m-%d').date(),
+            start_time=datetime.strptime(request.form.get('start_time'), '%H:%M').time(),
+            end_time=datetime.strptime(request.form.get('end_time'), '%H:%M').time(),
+            shift_id=shift_id
+        )
+        
+        schedule.notes = request.form.get('notes')
+        
+        db.session.add(schedule)
+        db.session.commit()
+        
+        repo.log_action(
+            user_id=session['user_id'],
+            action='create_schedule',
+            entity_type='schedule',
+            entity_id=schedule.schedule_id,
+            description=f'Created schedule for employee {employee_id}'
+        )
+        
+        flash('Schedule created successfully', 'success')
+        return redirect(url_for('schedule_calendar'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    employees = Employee.query.filter_by(status='active').all()
+    shifts = Shift.query.filter_by(is_active=True).all()
+    return render_template('schedule_form.html', user=user, employees=employees, shifts=shifts)
+
+
+@app.route('/schedule/shifts', methods=['GET', 'POST'])
+@login_required
+def manage_shifts():
+    """Manage shift templates."""
+    from models import Shift
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        from datetime import datetime
+        
+        shift = Shift(
+            shift_name=request.form.get('name'),
+            start_time=datetime.strptime(request.form.get('start_time'), '%H:%M').time(),
+            end_time=datetime.strptime(request.form.get('end_time'), '%H:%M').time(),
+            description=request.form.get('description')
+        )
+        
+        db.session.add(shift)
+        db.session.commit()
+        
+        flash('Shift created successfully', 'success')
+        return redirect(url_for('manage_shifts'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    shifts = Shift.query.all()
+    return render_template('shift_manager.html', user=user, shifts=shifts)
 
 
 # ==================== ERROR HANDLERS ====================

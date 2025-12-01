@@ -15,10 +15,47 @@ class Config:
     # Week 9 Concept: Security best practices - environment variable usage
     SECRET_KEY = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production-ca2-2024")
     
-    # Database configuration (CA-2 Requirement: SQLite)
-    # Week 7 Concept: Database configuration with SQLite
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(basedir, 'workflowx.db')}"
+    # File Upload Configuration
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'images', 'profiles')
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB max file size
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    
+    # Database configuration - MS SQL Server
+    # Week 7 Concept: Database configuration with MS SQL Server
+    
+    # MS SQL Server Settings
+    MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
+    MSSQL_DATABASE = 'workflowx'
+    MSSQL_USERNAME = 'workflowx_admin'
+    MSSQL_PASSWORD = 'WorkFlowDB@2025'
+    
+    # Try ODBC Driver 17 first, fallback to Driver 18
+    try:
+        import pyodbc
+        drivers = [x for x in pyodbc.drivers() if 'SQL Server' in x]
+        if any('17' in d for d in drivers):
+            MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
+        elif any('18' in d for d in drivers):
+            MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
+        else:
+            MSSQL_DRIVER = 'SQL Server'
+    except:
+        MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
+    
+    # Build MS SQL Server connection string
+    # Using Windows Authentication (more reliable for local development)
+    SQLALCHEMY_DATABASE_URI = (
+        f'mssql+pyodbc://{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+        f'driver={MSSQL_DRIVER}&trusted_connection=yes'
+    )
+    
+    # Alternative: SQL Server Authentication (if needed)
+    # SQLALCHEMY_DATABASE_URI = (
+    #     f'mssql+pyodbc://{MSSQL_USERNAME}:{MSSQL_PASSWORD}@'
+    #     f'{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+    #     f'driver={MSSQL_DRIVER}&TrustServerCertificate=yes'
+    # )
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_recycle": 300,

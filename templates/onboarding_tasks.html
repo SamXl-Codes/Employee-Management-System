@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Onboarding Tasks - WorkFlowX{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Onboarding Tasks</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ employee.name }} (WFX-{{ "%04d"|format(employee.employee_id) }})</p>
+    </div>
+    
+    {% if session.role == 'admin' %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Add New Task</h2>
+        <form method="POST" action="{{ url_for('create_onboarding_task', employee_id=employee.employee_id) }}" class="grid grid-cols-4 gap-4">
+            <input type="text" name="title" placeholder="Task Title" required class="px-4 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+            <input type="date" name="due_date" class="px-4 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+            <select name="priority" class="px-4 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option value="low">Low Priority</option>
+                <option value="medium" selected>Medium Priority</option>
+                <option value="high">High Priority</option>
+            </select>
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Add Task</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for task in tasks %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 {% if task.priority == 'high' %}border-red-500{% elif task.priority == 'medium' %}border-yellow-500{% else %}border-blue-500{% endif %}">
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="font-semibold text-gray-900 dark:text-white">{{ task.task_title }}</h3>
+                <span class="px-2 py-1 text-xs rounded-full {% if task.status == 'completed' %}bg-green-100 text-green-800{% elif task.status == 'in_progress' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ task.status.replace('_', ' ').title() }}
+                </span>
+            </div>
+            {% if task.description %}
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ task.description }}</p>
+            {% endif %}
+            {% if task.due_date %}
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3"><i class="fas fa-calendar mr-2"></i>Due: {{ task.due_date.strftime('%b %d, %Y') }}</p>
+            {% if task.is_overdue() %}
+            <p class="text-sm text-red-600 mb-3"><i class="fas fa-exclamation-triangle mr-2"></i>Overdue!</p>
+            {% endif %}
+            {% endif %}
+            {% if task.status != 'completed' %}
+            <form method="POST" action="{{ url_for('complete_onboarding_task', task_id=task.task_id) }}">
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">Mark Complete</button>
+            </form>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="col-span-3 text-center py-12 text-gray-500">No onboarding tasks yet.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

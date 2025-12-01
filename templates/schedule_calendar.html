@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Schedule Calendar - WorkFlowX{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Schedule Calendar</h1>
+        {% if session.role == 'admin' %}
+        <div class="flex space-x-4">
+            <a href="{{ url_for('manage_shifts') }}" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"><i class="fas fa-cog mr-2"></i>Manage Shifts</a>
+            <a href="{{ url_for('create_schedule') }}" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"><i class="fas fa-plus mr-2"></i>New Schedule</a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <table class="min-w-full">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shift Time</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for schedule in schedules %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">{{ schedule.schedule_date.strftime('%a, %b %d, %Y') }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">{{ schedule.employee.name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">{{ schedule.start_time.strftime('%I:%M %p') }} - {{ schedule.end_time.strftime('%I:%M %p') }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">{{ "%.1f"|format(schedule.get_duration_hours()) }} hrs</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs rounded-full {% if schedule.status == 'completed' %}bg-green-100 text-green-800{% elif schedule.status == 'cancelled' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ schedule.status.title() }}
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="px-6 py-12 text-center text-gray-500">No schedules found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

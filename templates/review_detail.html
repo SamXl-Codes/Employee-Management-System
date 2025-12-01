@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Performance Review - {{ review.employee.name }} - WorkFlowX{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Performance Review</h1>
+            <p class="mt-2 text-gray-600 dark:text-gray-400">Review for {{ review.employee.name }}</p>
+        </div>
+        <a href="{{ url_for('performance_reviews') }}" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-semibold">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Reviews
+        </a>
+    </div>
+
+    <!-- Review Details Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
+        
+        <!-- Employee Info Section -->
+        <div class="mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Employee Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase">Employee Name</label>
+                    <p class="text-lg font-medium text-gray-900 dark:text-white mt-1">{{ review.employee.name }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase">Email</label>
+                    <p class="text-lg font-medium text-gray-900 dark:text-white mt-1">{{ review.employee.email }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase">Department</label>
+                    <p class="text-lg font-medium text-gray-900 dark:text-white mt-1">{{ review.employee.department.name if review.employee.department else 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase">Role</label>
+                    <p class="text-lg font-medium text-gray-900 dark:text-white mt-1">{{ review.employee.role.title if review.employee.role else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Review Period & Rating Section -->
+        <div class="mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Review Summary</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase">Review Period</label>
+                    <p class="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                        {{ review.review_period_start.strftime('%b %d, %Y') }} - {{ review.review_period_end.strftime('%b %d, %Y') }}
+                    </p>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase">Overall Rating</label>
+                    <div class="mt-2">
+                        <span class="inline-flex items-center px-4 py-2 rounded-lg font-bold text-xl {% if review.overall_rating >= 4 %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% elif review.overall_rating >= 3 %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+                            {{ review.overall_rating }}/5 
+                            {% if review.overall_rating == 5 %}⭐⭐⭐⭐⭐
+                            {% elif review.overall_rating == 4 %}⭐⭐⭐⭐
+                            {% elif review.overall_rating == 3 %}⭐⭐⭐
+                            {% elif review.overall_rating == 2 %}⭐⭐
+                            {% else %}⭐{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase">Status</label>
+                    <div class="mt-2">
+                        <span class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold {% if review.status == 'completed' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% elif review.status == 'submitted' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                            {{ review.status.title() }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strengths Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                <i class="fas fa-star text-yellow-500 mr-2"></i> Strengths
+            </h2>
+            <div class="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 p-4 rounded">
+                <p class="text-gray-800 dark:text-gray-300 whitespace-pre-line">{{ review.strengths or 'No strengths recorded.' }}</p>
+            </div>
+        </div>
+
+        <!-- Areas for Improvement Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                <i class="fas fa-chart-line text-blue-500 mr-2"></i> Areas for Improvement
+            </h2>
+            <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded">
+                <p class="text-gray-800 dark:text-gray-300 whitespace-pre-line">{{ review.areas_for_improvement or 'No areas for improvement recorded.' }}</p>
+            </div>
+        </div>
+
+        <!-- Goals Met Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                <i class="fas fa-bullseye text-purple-500 mr-2"></i> Goals Achievement
+            </h2>
+            <div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 p-4 rounded">
+                <p class="text-lg font-semibold text-gray-800 dark:text-gray-300">
+                    {% if review.goals_met %}
+                        <i class="fas fa-check-circle text-green-600 dark:text-green-400 mr-2"></i>
+                        Goals were successfully met during this review period
+                    {% else %}
+                        <i class="fas fa-times-circle text-red-600 dark:text-red-400 mr-2"></i>
+                        Goals were not fully met during this review period
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Additional Comments Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                <i class="fas fa-comment-dots text-indigo-500 mr-2"></i> Additional Comments
+            </h2>
+            <div class="bg-gray-50 dark:bg-gray-900/20 border-l-4 border-indigo-500 p-4 rounded">
+                <p class="text-gray-800 dark:text-gray-300 whitespace-pre-line">{{ review.comments or 'No additional comments provided.' }}</p>
+            </div>
+        </div>
+
+        <!-- Review Metadata -->
+        <div class="pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
+                <div>
+                    <span class="font-semibold">Reviewed by:</span> {{ review.reviewer.username if review.reviewer else 'Unknown' }}
+                </div>
+                <div>
+                    <span class="font-semibold">Created on:</span> {{ review.created_at.strftime('%b %d, %Y at %I:%M %p') if review.created_at else 'N/A' }}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-6 flex gap-4">
+        <a href="{{ url_for('performance_reviews') }}" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-semibold">
+            <i class="fas fa-arrow-left mr-2"></i>Back to All Reviews
+        </a>
+        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+            <i class="fas fa-print mr-2"></i>Print Review
+        </button>
+    </div>
+</div>
+
+<style>
+    @media print {
+        nav, footer, button, .no-print { display: none !important; }
+        body { background: white; }
+        .bg-white { background: white !important; }
+    }
+</style>
+{% endblock %}

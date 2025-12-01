@@ -415,7 +415,7 @@ def get_employee_by_id(employee_id: int) -> Optional[Employee]:
 
 def search_employees(search_term: str) -> List[Employee]:
     """
-    Search employees by name or email.
+    Search employees by name, email, employee ID, department, or role.
     
     Args:
         search_term: Search term
@@ -425,11 +425,49 @@ def search_employees(search_term: str) -> List[Employee]:
     """
     try:
         search_pattern = f"%{search_term}%"
-        return Employee.query.filter(
+        
+        # Try to parse as employee ID (e.g., "WFX-0001" or just "0001" or "1")
+        employee_id_num = None
+        if search_term.upper().startswith('WFX-'):
+            try:
+                employee_id_num = int(search_term.upper().replace('WFX-', ''))
+            except ValueError:
+                pass
+        else:
+            try:
+                employee_id_num = int(search_term)
+            except ValueError:
+                pass
+        
+        # Search by employee ID number if parsed successfully
+        if employee_id_num is not None:
+            results = Employee.query.filter(Employee.employee_id == employee_id_num).all()
+            if results:
+                return results
+        
+        # Search by name/email
+        results = Employee.query.filter(
             (Employee.name.ilike(search_pattern)) | 
             (Employee.email.ilike(search_pattern))
         ).all()
-    except Exception:
+        
+        # If no results, try department search
+        if not results:
+            dept_results = Employee.query.join(Employee.department).filter(
+                Department.name.ilike(search_pattern)
+            ).all()
+            results.extend(dept_results)
+        
+        # If still no results, try role search  
+        if not results:
+            role_results = Employee.query.join(Employee.role).filter(
+                Role.title.ilike(search_pattern)
+            ).all()
+            results.extend(role_results)
+            
+        return results
+    except Exception as e:
+        print(f"Search error: {e}")
         return []
 
 
@@ -498,6 +536,34 @@ def delete_employee(employee_id: int, soft_delete: bool = True) -> tuple:
     except Exception as e:
         db.session.rollback()
         return False, f"Error deleting employee: {str(e)}"
+
+
+def reactivate_employee(employee_id: int) -> tuple:
+    """
+    Reactivate a deactivated employee.
+    
+    Args:
+        employee_id: Employee ID
+        
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    try:
+        employee = Employee.query.get(employee_id)
+        
+        if not employee:
+            return False, "Employee not found"
+        
+        if employee.status.lower() == 'active':
+            return False, "Employee is already active"
+        
+        employee.activate()
+        db.session.commit()
+        return True, f"Employee {employee.name} has been reactivated successfully"
+        
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Error reactivating employee: {str(e)}"
 
 
 # ==================== ATTENDANCE REPOSITORY ====================
@@ -710,3 +776,35 @@ def get_dashboard_stats() -> Dict:
             'pending_leaves': 0,
             'today_attendance': 0
         }
+
+
+# ==================== AUDIT LOG REPOSITORY ====================
+
+def log_action(user_id: int, action: str, entity_type: str, entity_id: int = None, description: str = None, ip_address: str = None) -> None:
+    """
+    Log an action to the audit log.
+    
+    Args:
+        user_id: ID of the user performing the action
+        action: Action performed (e.g., 'create', 'update', 'delete')
+        entity_type: Type of entity (e.g., 'employee', 'payroll', 'review')
+        entity_id: ID of the entity (optional)
+        description: Description of the action (optional)
+        ip_address: IP address of the user (optional)
+    """
+    try:
+        from models import AuditLog
+        log = AuditLog(
+            user_id=user_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            description=description,
+            ip_address=ip_address
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        # Silently fail to prevent audit logging from breaking the application
+        print(f"[AUDIT LOG ERROR] Failed to log action: {str(e)}")

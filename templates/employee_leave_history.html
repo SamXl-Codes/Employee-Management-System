@@ -3,7 +3,7 @@
 {% block title %}My Leave History{% endblock %}
 
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <h1 class="text-3xl font-semibold text-gray-900">My Leave History</h1>
     <div class="flex gap-3 mt-4">
         <a href="{{ url_for('add_leave_request') }}" class="btn btn-primary">Request Leave</a>
@@ -11,7 +11,7 @@
     </div>
 </div>
 
-<div class="bg-white rounded-lg shadow overflow-hidden">
+<div class="bg-white rounded-lg shadow overflow-hidden card-animate">
     <div class="px-6 py-4 border-b">
         <h2 class="text-lg font-semibold text-gray-900">All Leave Requests</h2>
     </div>
@@ -59,4 +59,37 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+    /* Fix leave status badges in dark mode */
+    [data-theme="dark"] .bg-green-100 {
+        background-color: #16a34a !important;
+        color: white !important;
+        font-weight: 600 !important;
+    }
+    
+    [data-theme="dark"] .text-green-800 {
+        color: white !important;
+    }
+    
+    [data-theme="dark"] .bg-red-100 {
+        background-color: #991b1b !important;
+        color: #fee2e2 !important;
+        font-weight: 600 !important;
+    }
+    
+    [data-theme="dark"] .text-red-800 {
+        color: #fee2e2 !important;
+    }
+    
+    [data-theme="dark"] .bg-yellow-100 {
+        background-color: #854d0e !important;
+        color: #fef3c7 !important;
+        font-weight: 600 !important;
+    }
+    
+    [data-theme="dark"] .text-yellow-800 {
+        color: #fef3c7 !important;
+    }
+</style>
 {% endblock %}

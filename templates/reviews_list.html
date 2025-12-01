@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Performance Reviews - WorkFlowX{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white" style="color: inherit;">Performance Reviews</h1>
+            <p class="mt-2 font-semibold text-base text-gray-900 dark:text-white" style="color: inherit;">Manage employee performance evaluations and ratings (Admin/HR Only)</p>
+        </div>
+        <a href="{{ url_for('select_employee_for_review') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg font-semibold">
+            <i class="fas fa-plus mr-2"></i>Create Review
+        </a>
+    </div>
+
+    <!-- Reviews Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+        <table class="min-w-full">
+            <thead class="bg-gray-200 dark:bg-gray-900">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-black dark:text-gray-200 uppercase tracking-wider">Employee</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-black dark:text-gray-200 uppercase tracking-wider">Period</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-black dark:text-gray-200 uppercase tracking-wider">Rating</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-black dark:text-gray-200 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-black dark:text-gray-200 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-300 dark:divide-gray-700">
+                {% for review in reviews %}
+                <tr class="hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors">
+                    <td class="px-6 py-4 text-sm font-semibold text-black dark:text-white">{{ review.employee.name }}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-300">{{ review.review_period_start.strftime('%b %Y') }} - {{ review.review_period_end.strftime('%b %Y') }}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="px-3 py-1 rounded-full font-bold {% if review.overall_rating >= 4 %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% elif review.overall_rating >= 3 %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+                            {{ review.overall_rating }}/5
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold {% if review.status == 'completed' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                            {{ review.status.title() }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                        <a href="{{ url_for('view_review', review_id=review.review_id) }}" class="text-blue-700 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-bold">
+                            <i class="fas fa-eye mr-1"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-16 text-center bg-gray-50 dark:bg-gray-800">
+                        <i class="fas fa-clipboard-list text-gray-400 dark:text-gray-600 text-6xl mb-4"></i>
+                        <p class="text-black dark:text-gray-300 text-xl font-bold mb-2">No reviews found</p>
+                        <p class="text-gray-800 dark:text-gray-400 text-base font-medium">Click "Create Review" above to create your first performance review</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

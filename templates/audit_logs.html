@@ -3,13 +3,13 @@
 {% block title %}Audit Logs{% endblock %}
 
 {% block content %}
-<div class="mb-8">
+<div class="mb-8 page-content">
     <h1 class="text-3xl font-semibold text-gray-900">Audit Trail</h1>
     <p class="text-gray-600 mt-1">Track all system activities and changes</p>
 </div>
 
 <!-- Filters -->
-<div class="bg-white rounded-lg shadow p-6 mb-6">
+<div class="bg-white rounded-lg shadow p-6 mb-6 card-animate">
     <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
     <form method="GET" action="{{ url_for('audit_logs') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
@@ -52,7 +52,7 @@
 </div>
 
 <!-- Audit Logs Table -->
-<div class="bg-white rounded-lg shadow overflow-hidden">
+<div class="bg-white rounded-lg shadow overflow-hidden card-animate">
     <div class="px-6 py-4 border-b">
         <h2 class="text-lg font-semibold text-gray-900">Activity Log</h2>
         <p class="text-sm text-gray-600 mt-1">{{ audit_logs|length }} records</p>
@@ -74,7 +74,7 @@
             </thead>
             <tbody>
                 {% for log in audit_logs %}
-                <tr>
+                <tr class="animate-item">
                     <td class="text-sm text-gray-600">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}</td>
                     <td class="font-medium">
                         {% if log.user %}{{ log.user.username }}{% else %}Unknown{% endif %}

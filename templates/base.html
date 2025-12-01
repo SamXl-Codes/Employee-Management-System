@@ -8,6 +8,9 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono&display=swap" rel="stylesheet">
     
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -16,6 +19,7 @@
     
     <script>
         tailwind.config = {
+            darkMode: 'class', // Enable class-based dark mode
             theme: {
                 extend: {
                     fontFamily: {
@@ -26,21 +30,38 @@
             }
         }
     </script>
+    
+    <script>
+        // Dark mode initialization
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            // Add/remove 'dark' class for Tailwind dark mode
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
 </head>
 <body class="bg-gray-50 font-sans">
     <!-- Navigation Bar -->
     {% if session.user_id %}
-    <nav class="bg-white shadow-sm border-b border-gray-200 fixed w-full top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 lg:px-8">
-            <div class="flex justify-between items-center h-16">
+    <nav class="bg-white shadow-sm border-b border-gray-200 fixed w-full top-0 z-50" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+            <div class="flex justify-between items-center min-h-16 py-2">
                 <!-- Logo -->
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-blue-600">WorkFlowX</h1>
-                    <span class="ml-3 text-sm text-gray-500">Employee Management</span>
-                </div>
+                <a href="{% if session.role == 'admin' %}{{ url_for('dashboard') }}{% else %}{{ url_for('employee_dashboard') }}{% endif %}" class="flex items-center flex-shrink-0 mr-2 hover:opacity-80 transition-opacity">
+                    <div class="logo-icon text-sm sm:text-base">W</div>
+                    <div class="ml-1 sm:ml-2">
+                        <h1 class="text-sm sm:text-lg md:text-2xl font-bold leading-tight" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">WorkFlowX</h1>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 hidden sm:block">Employee Management</p>
+                    </div>
+                </a>
                 
                 <!-- Navigation Links -->
-                <div class="hidden md:flex items-center space-x-1">
+                <div class="hidden md:flex items-center space-x-2 ml-8">
                     {% if session.role == 'admin' %}
                         <!-- Admin Navigation -->
                         <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
@@ -52,44 +73,48 @@
                         <a href="{{ url_for('departments') }}" class="nav-link {% if 'department' in request.endpoint %}active{% endif %}">
                             Departments
                         </a>
-                        <a href="{{ url_for('roles') }}" class="nav-link {% if 'role' in request.endpoint and 'employee' not in request.endpoint %}active{% endif %}">
-                            Roles
-                        </a>
-                        <a href="{{ url_for('attendance') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('attendance') }}" class="nav-link {% if 'attendance' in request.endpoint and 'qr' not in request.endpoint %}active{% endif %}">
                             Attendance
                         </a>
-                        <a href="{{ url_for('leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint and 'my_leave' not in request.endpoint %}active{% endif %}">
-                            Leave Requests
+                        <a href="{{ url_for('payroll_dashboard') }}" class="nav-link {% if 'payroll' in request.endpoint %}active{% endif %}">
+                            Payroll
                         </a>
                         <a href="{{ url_for('reports') }}" class="nav-link {% if 'report' in request.endpoint or 'export' in request.endpoint %}active{% endif %}">
                             Reports
                         </a>
+                        <a href="{{ url_for('admin_settings') }}" class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">
+                            Settings
+                        </a>
                     {% else %}
                         <!-- Employee Navigation -->
-                        <a href="{{ url_for('employee_dashboard') }}" class="nav-link {% if 'employee_dashboard' in request.endpoint %}active{% endif %}">
-                            My Dashboard
+                        <a href="{{ url_for('employee_dashboard') }}" class="nav-link {% if 'employee_dashboard' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                            Dashboard
                         </a>
-                        <a href="{{ url_for('my_profile') }}" class="nav-link {% if 'my_profile' in request.endpoint %}active{% endif %}">
-                            My Profile
+                        <a href="{{ url_for('employee_profile') }}" class="nav-link {% if 'employee_profile' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                            Profile
                         </a>
-                        <a href="{{ url_for('my_attendance') }}" class="nav-link {% if 'my_attendance' in request.endpoint %}active{% endif %}">
-                            My Attendance
+                        <a href="{{ url_for('my_attendance') }}" class="nav-link {% if 'my_attendance' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                            Attendance
                         </a>
-                        <a href="{{ url_for('my_leave_history') }}" class="nav-link {% if 'my_leave' in request.endpoint %}active{% endif %}">
-                            My Leaves
+                        <a href="{{ url_for('my_leave_history') }}" class="nav-link {% if 'my_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                            Leave History
                         </a>
-                        <a href="{{ url_for('add_leave_request') }}" class="nav-link {% if 'add_leave' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('add_leave_request') }}" class="nav-link {% if 'add_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
                             Request Leave
                         </a>
                     {% endif %}
                 </div>
                 
                 <!-- User Menu -->
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-700">
-                        <span class="font-medium">{{ session.username }}</span>
+                <div class="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
+                    <!-- Dark Mode Toggle -->
+                    <button onclick="toggleDarkMode()" class="p-1.5 sm:p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Toggle Dark Mode">
+                        <span id="theme-icon" style="font-size: 1.1rem; transition: all 0.3s ease;">☀️</span>
+                    </button>
+                    <span class="hidden sm:inline text-xs sm:text-sm font-medium" style="color: var(--text-secondary);">
+                        {{ session.username }}
                     </span>
-                    <a href="{{ url_for('logout') }}" class="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md hover:bg-gray-100">
+                    <a href="{{ url_for('logout') }}" class="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-md whitespace-nowrap bg-red-600 text-white hover:bg-red-700 transition-colors">
                         Logout
                     </a>
                 </div>
@@ -121,19 +146,102 @@
     
     <!-- Footer -->
     {% if session.user_id %}
-    <footer class="bg-white border-t border-gray-200 mt-12">
+    <footer class="border-t mt-auto pt-8 pb-6" style="background-color: var(--bg-primary); border-color: var(--border-color); margin-top: 100px;">
         <div class="max-w-7xl mx-auto px-4 lg:px-8 py-6">
             <div class="text-center">
-                <p class="text-sm text-gray-600 mb-2">
+                <p class="text-sm mb-2" style="color: var(--text-secondary);">
                     &copy; 2025 WorkFlowX. All rights reserved.
                 </p>
-                <p class="text-xs text-gray-500">
+                <p class="text-xs" style="color: var(--text-tertiary);">
                     Developed by Samuel Ogunlusi & George Sherman
                 </p>
             </div>
         </div>
     </footer>
     {% endif %}
+    
+    <script>
+        // Dark mode toggle function
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Add/remove 'dark' class for Tailwind dark mode
+            if (newTheme === 'dark') {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+            
+            // Update both icons (navbar and floating button)
+            const icon = document.getElementById('theme-icon');
+            const fabIcon = document.getElementById('theme-icon-fab');
+            
+            [icon, fabIcon].forEach(iconElement => {
+                if (iconElement) {
+                    iconElement.style.transform = 'scale(0.5) rotate(180deg)';
+                    iconElement.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        iconElement.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+                        iconElement.style.transform = 'scale(1) rotate(0deg)';
+                        iconElement.style.opacity = '1';
+                    }, 150);
+                }
+            });
+        }
+        
+        // Set initial icons
+        window.addEventListener('DOMContentLoaded', function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            const icon = document.getElementById('theme-icon');
+            const fabIcon = document.getElementById('theme-icon-fab');
+            
+            [icon, fabIcon].forEach(iconElement => {
+                if (iconElement) {
+                    iconElement.textContent = theme === 'dark' ? '🌙' : '☀️';
+                }
+            });
+            
+            // Add smooth page transition on load (only on forward navigation)
+            const navigationType = performance.getEntriesByType('navigation')[0]?.type;
+            if (navigationType !== 'back_forward') {
+                document.body.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.style.transition = 'opacity 0.3s ease-in-out';
+                    document.body.style.opacity = '1';
+                }, 10);
+            }
+        });
+        
+        // Smooth transition when navigating away (but allow back button)
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.href && !link.target && !link.href.startsWith('#') && 
+                link.href.indexOf(window.location.origin) === 0 &&
+                !link.hasAttribute('download') &&
+                !link.classList.contains('no-transition')) {
+                e.preventDefault();
+                document.body.style.opacity = '0';
+                setTimeout(() => {
+                    window.location.href = link.href;
+                }, 200);
+            }
+        });
+        
+        // Handle browser back/forward buttons properly
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                // Page was loaded from cache (back/forward navigation)
+                document.body.style.opacity = '1';
+                document.body.style.transition = 'none';
+            }
+        });
+    </script>
     
     {% block scripts %}{% endblock %}
 </body>
