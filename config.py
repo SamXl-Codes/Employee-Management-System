@@ -32,6 +32,11 @@ class Config:
         os.environ.get('PORT') is not None  # Railway sets PORT
     )
     
+    # Debug logging
+    print(f"[CONFIG DEBUG] IS_RAILWAY: {IS_RAILWAY}")
+    print(f"[CONFIG DEBUG] PORT: {os.environ.get('PORT')}")
+    print(f"[CONFIG DEBUG] RAILWAY_STATIC_URL: {os.environ.get('RAILWAY_STATIC_URL')}")
+    
     if IS_RAILWAY:
         # Railway deployment - Use SQLite (simple, no separate database needed)
         # Store database in persistent storage
