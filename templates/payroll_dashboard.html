@@ -5,14 +5,21 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+    <div class="flex justify-between items-center mb-8 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg flex-wrap gap-4">
         <div>
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Payroll Management</h1>
             <p class="text-gray-700 dark:text-gray-300 mt-2 font-medium">Manage employee salaries and payslips</p>
         </div>
-        <a href="{{ url_for('generate_payroll') }}" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl">
-            <i class="fas fa-plus mr-2"></i>Generate Payroll
-        </a>
+        <div class="flex gap-3">
+            <form method="POST" action="{{ url_for('regenerate_all_payroll') }}" style="display: inline;">
+                <button type="submit" onclick="return confirm('This will initialize complete payroll history for all employees from Jan 2024 or their hire date. Continue?')" class="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-xl">
+                    <i class="fas fa-database mr-2"></i>Initialize Payroll Data
+                </button>
+            </form>
+            <a href="{{ url_for('generate_payroll') }}" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl">
+                <i class="fas fa-plus mr-2"></i>Generate Payroll
+            </a>
+        </div>
     </div>
 
     <!-- Stats -->
@@ -21,7 +28,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-black dark:text-gray-400 text-sm font-medium">Total Paid</p>
-                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">${{ "%.2f"|format(total_paid) }}</h3>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">€{{ "%.2f"|format(total_paid) }}</h3>
                 </div>
                 <div class="bg-green-100 dark:bg-green-900 p-4 rounded-lg">
                     <i class="fas fa-dollar-sign text-green-600 dark:text-green-400 text-2xl"></i>
@@ -56,8 +63,37 @@
 
     <!-- Payroll Table -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-        <div class="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white">
+        <div class="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <h2 class="text-xl font-semibold">All Payroll Records</h2>
+            
+            <!-- Filter Section -->
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <select id="monthFilter" onchange="filterPayroll()" style="padding: 8px 12px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: white; font-size: 14px; cursor: pointer;">
+                    <option value="">All Months</option>
+                    <option value="01">January</option>
+                    <option value="02">February</option>
+                    <option value="03">March</option>
+                    <option value="04">April</option>
+                    <option value="05">May</option>
+                    <option value="06">June</option>
+                    <option value="07">July</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                
+                <select id="yearFilter" onchange="filterPayroll()" style="padding: 8px 12px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: white; font-size: 14px; cursor: pointer;">
+                    <option value="">All Years</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                </select>
+                
+                <button onclick="resetFilters()" style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500;">
+                    Clear
+                </button>
+            </div>
         </div>
         
         <div class="overflow-x-auto">
@@ -74,9 +110,9 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody id="payrollTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {% for payroll in payrolls %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" data-year="{{ payroll.pay_period_start.strftime('%Y') }}" data-month="{{ payroll.pay_period_start.strftime('%m') }}">
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ loop.index }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900 dark:text-white">{{ payroll.employee.name }}</div>
@@ -86,13 +122,13 @@
                             {{ payroll.pay_period_start.strftime('%b %d') }} - {{ payroll.pay_period_end.strftime('%b %d, %Y') }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                            ${{ "%.2f"|format(payroll.gross_salary) }}
+                            €{{ "%.2f"|format(payroll.gross_salary) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 dark:text-red-400">
-                            -${{ "%.2f"|format(payroll.total_deductions) }}
+                            -€{{ "%.2f"|format(payroll.total_deductions) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600 dark:text-green-400">
-                            ${{ "%.2f"|format(payroll.net_salary) }}
+                            €{{ "%.2f"|format(payroll.net_salary) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% if payroll.payment_status == 'paid' %}
@@ -142,4 +178,35 @@
         </div>
     </div>
 </div>
+
+<script>
+function filterPayroll() {
+    const monthFilter = document.getElementById('monthFilter').value;
+    const yearFilter = document.getElementById('yearFilter').value;
+    const rows = document.querySelectorAll('#payrollTableBody tr[data-year]');
+    
+    let visibleCount = 0;
+    rows.forEach(row => {
+        const rowMonth = row.getAttribute('data-month');
+        const rowYear = row.getAttribute('data-year');
+        
+        const monthMatch = !monthFilter || rowMonth === monthFilter;
+        const yearMatch = !yearFilter || rowYear === yearFilter;
+        
+        if (monthMatch && yearMatch) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function resetFilters() {
+    document.getElementById('monthFilter').value = '';
+    document.getElementById('yearFilter').value = '';
+    filterPayroll();
+}
+</script>
+
 {% endblock %}

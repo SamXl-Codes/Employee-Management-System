@@ -333,6 +333,8 @@ class Employee(db.Model):
     
     def to_dict(self):
         """Convert to dictionary."""
+        # Get user_id by finding user with matching email
+        user = User.query.filter_by(username=self.email).first()
         return {
             'employee_id': self.employee_id,
             'name': self.name,
@@ -346,7 +348,10 @@ class Employee(db.Model):
             'date_joined': self.date_joined.strftime('%Y-%m-%d') if self.date_joined else None,
             'status': self.status,
             'attendance_percentage': self.get_attendance_percentage(),
-            'total_leave_days': self.get_total_leave_days()
+            'total_leave_days': self.get_total_leave_days(),
+            'photo_filename': self.profile_image,
+            'profile_image': self.profile_image,  # Add for message search compatibility
+            'user_id': user.user_id if user else None
         }
     
     def __str__(self):
@@ -455,6 +460,7 @@ class LeaveRequest(db.Model):
     status = db.Column(db.String(20), default='Pending')  # 'Pending', 'Approved', 'Rejected'
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     reviewed_at = db.Column(db.DateTime)
+    hr_notes = db.Column(db.Text, nullable=True)  # HR notes for approval/rejection decision
     
     def __init__(self, employee_id, start_date, end_date, leave_type, reason=None):
         """
@@ -517,7 +523,8 @@ class LeaveRequest(db.Model):
             'status': self.status,
             'days': self.calculate_days(),
             'submitted_at': self.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if self.submitted_at else None,
-            'reviewed_at': self.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if self.reviewed_at else None
+            'reviewed_at': self.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if self.reviewed_at else None,
+            'hr_notes': self.hr_notes
         }
     
     def __str__(self):
@@ -1141,3 +1148,78 @@ class Shift(db.Model):
     
     def __repr__(self):
         return f"<Shift {self.shift_id}: {self.shift_name}>"
+
+
+class Message(db.Model):
+    """
+    Message model for internal communication between admin and employees.
+    Supports both specific employee messages and broadcast messages to all employees.
+    
+    Attributes:
+        message_id: Primary key
+        sender_id: Foreign key to User (admin who sent the message)
+        recipient_id: Foreign key to User (employee recipient, NULL for broadcasts)
+        subject: Message subject/title
+        body: Message content
+        is_broadcast: Boolean indicating if message is sent to all employees
+        is_read: Boolean indicating if recipient has read the message
+        sent_at: Timestamp when message was sent
+        read_at: Timestamp when message was read (NULL if unread)
+    """
+    __tablename__ = 'messages'
+    
+    message_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)  # NULL for broadcast
+    subject = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    is_broadcast = db.Column(db.Boolean, default=False)
+    is_read = db.Column(db.Boolean, default=False)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+    read_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
+    recipient = db.relationship('User', foreign_keys=[recipient_id], backref='received_messages')
+    
+    def __init__(self, sender_id, subject, body, recipient_id=None, is_broadcast=False):
+        """
+        Initialize a new Message.
+        
+        Args:
+            sender_id: ID of admin/user sending the message
+            subject: Message subject
+            body: Message content
+            recipient_id: ID of employee recipient (None for broadcast)
+            is_broadcast: Whether message is broadcast to all employees
+        """
+        self.sender_id = sender_id
+        self.recipient_id = recipient_id
+        self.subject = subject
+        self.body = body
+        self.is_broadcast = is_broadcast
+    
+    def mark_as_read(self):
+        """Mark message as read and record the timestamp."""
+        self.is_read = True
+        self.read_at = datetime.utcnow()
+    
+    def to_dict(self):
+        """Convert message to dictionary representation."""
+        return {
+            'message_id': self.message_id,
+            'sender_id': self.sender_id,
+            'sender_name': self.sender.username if self.sender else None,
+            'recipient_id': self.recipient_id,
+            'recipient_name': self.recipient.username if self.recipient else 'All Employees',
+            'subject': self.subject,
+            'body': self.body,
+            'is_broadcast': self.is_broadcast,
+            'is_read': self.is_read,
+            'sent_at': self.sent_at.strftime('%Y-%m-%d %H:%M:%S') if self.sent_at else None,
+            'read_at': self.read_at.strftime('%Y-%m-%d %H:%M:%S') if self.read_at else None
+        }
+    
+    def __repr__(self):
+        recipient_str = 'Broadcast' if self.is_broadcast else f'User {self.recipient_id}'
+        return f"<Message {self.message_id}: {self.subject} to {recipient_str}>"

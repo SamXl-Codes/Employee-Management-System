@@ -14,29 +14,26 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            overflow-x: hidden;
-            overflow-y: auto;
+            overflow: hidden;
             background: #ffffff;
-            min-height: 100vh;
         }
         
         .login-wrapper {
             display: flex;
-            min-height: 100vh;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
         }
         
         /* LEFT SIDE - HERO WITH REAL IMAGE */
         .hero-section {
             flex: 1;
-            min-width: 0;
             position: relative;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.88) 0%, rgba(59, 130, 246, 0.88) 100%),
-                        url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80') center/cover no-repeat;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%),
+                        url('https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=1200&q=80') center/cover no-repeat;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 40px;
+            padding: 80px;
             color: white;
             overflow: hidden;
         }
@@ -48,8 +45,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.3) 0%, transparent 50%);
+            background: radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.3) 0%, transparent 50%);
             pointer-events: none;
         }
         
@@ -62,8 +59,8 @@
         .logo-section {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 30px;
+            gap: 16px;
+            margin-bottom: 60px;
             animation: fadeInDown 0.8s ease;
         }
         
@@ -79,40 +76,37 @@
         }
         
         .logo-icon {
-            width: 44px;
-            height: 44px;
+            width: 56px;
+            height: 56px;
             background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(20px);
-            border-radius: 10px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             border: 2px solid rgba(255, 255, 255, 0.4);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            font-size: 24px;
-            font-weight: 900;
-            color: white;
         }
         
         .logo-text h1 {
-            font-size: 20px;
+            font-size: 28px;
             font-weight: 800;
             letter-spacing: -0.5px;
             margin-bottom: 2px;
         }
         
         .logo-text p {
-            font-size: 11px;
+            font-size: 13px;
             opacity: 0.95;
             font-weight: 500;
         }
         
         .hero-headline {
-            font-size: 34px;
+            font-size: 56px;
             font-weight: 900;
-            line-height: 1.2;
-            margin-bottom: 14px;
-            letter-spacing: -1.2px;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
             animation: fadeInUp 0.8s ease 0.2s both;
         }
         
@@ -128,27 +122,27 @@
         }
         
         .hero-description {
-            font-size: 13px;
-            line-height: 1.6;
+            font-size: 20px;
+            line-height: 1.7;
             opacity: 0.95;
-            margin-bottom: 26px;
+            margin-bottom: 50px;
             font-weight: 400;
             animation: fadeInUp 0.8s ease 0.4s both;
         }
         
         .features-grid {
             display: grid;
-            gap: 8px;
+            gap: 16px;
         }
         
         .feature-card {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 11px 14px;
+            gap: 20px;
+            padding: 20px 24px;
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(20px);
-            border-radius: 10px;
+            border-radius: 16px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             animation: fadeInUp 0.8s ease both;
@@ -167,10 +161,10 @@
         }
         
         .feature-icon {
-            width: 32px;
-            height: 32px;
+            width: 48px;
+            height: 48px;
             background: rgba(255, 255, 255, 0.25);
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -178,32 +172,26 @@
             backdrop-filter: blur(10px);
         }
         
-        .feature-icon svg {
-            width: 18px;
-            height: 18px;
-        }
-        
         .feature-text {
-            font-size: 13px;
+            font-size: 17px;
             font-weight: 600;
             line-height: 1.4;
         }
         
         /* RIGHT SIDE - LOGIN FORM */
         .form-section {
-            flex: 1;
-            min-width: 0;
+            flex: 0 0 560px;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px;
+            padding: 60px;
             box-shadow: -20px 0 60px rgba(0, 0, 0, 0.08);
         }
         
         .form-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 440px;
             animation: fadeIn 1s ease;
         }
         
@@ -214,19 +202,19 @@
         
         .form-header {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 40px;
         }
         
         .form-header h2 {
-            font-size: 26px;
+            font-size: 32px;
             font-weight: 800;
             color: #0f172a;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             letter-spacing: -0.5px;
         }
         
         .form-header p {
-            font-size: 14px;
+            font-size: 16px;
             color: #64748b;
             font-weight: 500;
         }
@@ -234,9 +222,9 @@
         .demo-box {
             background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
             border: 2px solid #93c5fd;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 24px;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
             position: relative;
             overflow: hidden;
         }
@@ -265,11 +253,11 @@
         .demo-title {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 11px;
+            gap: 8px;
+            font-size: 13px;
             font-weight: 700;
             color: #1e40af;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -278,8 +266,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 0;
-            font-size: 12px;
+            padding: 10px 0;
+            font-size: 14px;
             color: #1e293b;
         }
         
@@ -290,20 +278,20 @@
         
         .credential-row code {
             background: rgba(255, 255, 255, 0.9);
-            padding: 4px 10px;
-            border-radius: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
             font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-            font-size: 11px;
-            color: #2563eb;
+            font-size: 13px;
+            color: #4f46e5;
             font-weight: 600;
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            border: 1px solid rgba(79, 70, 229, 0.2);
         }
         
         .credential-note {
-            font-size: 10px;
+            font-size: 12px;
             color: #64748b;
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
             border-top: 1px solid rgba(148, 163, 184, 0.3);
             font-style: italic;
         }
@@ -330,15 +318,15 @@
         }
         
         .input-group {
-            margin-bottom: 18px;
+            margin-bottom: 24px;
         }
         
         .input-label {
             display: block;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 700;
             color: #0f172a;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             letter-spacing: -0.2px;
         }
         
@@ -348,24 +336,19 @@
         
         .input-icon {
             position: absolute;
-            left: 14px;
+            left: 18px;
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
             pointer-events: none;
         }
         
-        .input-icon svg {
-            width: 18px;
-            height: 18px;
-        }
-        
         .form-input {
             width: 100%;
-            padding: 12px 16px 12px 44px;
+            padding: 16px 20px 16px 52px;
             border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 14px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: 500;
             transition: all 0.3s ease;
             background: #f8fafc;
@@ -374,9 +357,13 @@
         
         .form-input:focus {
             outline: none;
-            border-color: #2563eb;
+            border-color: #4f46e5;
             background: #ffffff;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: #94a3b8;
         }
         
         .form-footer {
@@ -389,78 +376,81 @@
         .checkbox-wrapper {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         
         .checkbox-wrapper input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
-            accent-color: #2563eb;
+            accent-color: #4f46e5;
         }
         
         .checkbox-wrapper label {
-            font-size: 13px;
+            font-size: 14px;
             color: #475569;
             font-weight: 500;
             cursor: pointer;
         }
         
         .forgot-link {
-            color: #2563eb;
+            color: #4f46e5;
             text-decoration: none;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             transition: color 0.2s;
         }
         
+        .forgot-link:hover {
+            color: #4338ca;
+            text-decoration: underline;
+        }
+        
         .btn-login {
             width: 100%;
-            padding: 18px 24px;
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            padding: 18px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             color: white;
             border: none;
             border-radius: 12px;
-            font-size: 17px;
-            font-weight: 800;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.4);
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+            letter-spacing: 0.3px;
         }
         
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(37, 99, 235, 0.5);
-            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            box-shadow: 0 15px 40px rgba(79, 70, 229, 0.4);
         }
         
         .btn-login:active {
             transform: translateY(0);
-            box-shadow: 0 5px 20px rgba(37, 99, 235, 0.3);
         }
+        
         .help-section {
-            margin-top: 24px;
-            padding-top: 24px;
+            margin-top: 36px;
+            padding-top: 36px;
             border-top: 2px solid #e2e8f0;
             text-align: center;
         }
         
         .help-title {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 700;
             color: #0f172a;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         
         .help-text {
-            font-size: 13px;
+            font-size: 14px;
             color: #64748b;
         }
         
         .help-text a {
-            color: #2563eb;
+            color: #4f46e5;
             text-decoration: none;
             font-weight: 600;
         }
@@ -469,104 +459,18 @@
             text-decoration: underline;
         }
         
-        /* Mobile Header */
-        .mobile-header {
-            display: none;
-            text-align: center;
-            padding: 20px 20px 12px 20px;
-            background: white;
-        }
-        
-        .mobile-header-logo {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        
-        .mobile-header-logo .logo-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: 900;
-            color: white;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-        }
-        
-        .mobile-header-text {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-        }
-        
-        .mobile-header-text h1 {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1f2937;
-            margin: 0;
-        }
-        
-        .mobile-header-text p {
-            font-size: 13px;
-            color: #6b7280;
-            font-weight: 500;
-            margin: 0;
-        }
-        
         @media (max-width: 1024px) {
             .hero-section {
                 display: none;
             }
             
-            .mobile-header {
-                display: block;
-            }
-            
             .form-section {
                 flex: 1;
-                padding-top: 12px;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-                padding-bottom: 80px; /* Space for footer */
-            }
-            
-            .form-header h2 {
-                font-size: 24px;
-            }
-            
-            /* Footer mobile adjustments */
-            body > footer {
-                padding: 14px 16px !important;
-                font-size: 12px !important;
-            }
-            
-            body > footer > div {
-                flex-direction: column !important;
-                text-align: center !important;
-                gap: 8px !important;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Mobile Header (only visible on mobile) -->
-    <div class="mobile-header">
-        <div class="mobile-header-logo">
-            <div class="logo-icon">W</div>
-            <div class="mobile-header-text">
-                <h1>WorkflowX</h1>
-                <p>Employee Management System</p>
-            </div>
-        </div>
-    </div>
-    
     <div class="login-wrapper">
         <!-- LEFT SIDE: HERO WITH IMAGE -->
         <div class="hero-section">
@@ -574,7 +478,9 @@
                 <!-- Logo -->
                 <div class="logo-section">
                     <div class="logo-icon">
-                        W
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </div>
                     <div class="logo-text">
                         <h1>WorkflowX</h1>
@@ -649,6 +555,29 @@
                     <p>Sign in to access your dashboard</p>
                 </div>
                 
+                <!-- Demo Credentials -->
+                <div class="demo-box">
+                    <div class="demo-box-content">
+                        <div class="demo-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Demo Credentials
+                        </div>
+                        <div class="credential-row">
+                            <strong>Admin:</strong>
+                            <code>admin / admin123</code>
+                        </div>
+                        <div class="credential-row">
+                            <strong>Employee:</strong>
+                            <code>[email] / WorkFlow@2025</code>
+                        </div>
+                        <div class="credential-note">
+                            Example: john.smith@workflowx.com
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Error Messages -->
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
@@ -712,17 +641,5 @@
             </div>
         </div>
     </div>
-    
-    <!-- Footer -->
-    <footer style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); color: white; padding: 16px 24px; text-align: center; font-size: 13px; z-index: 1000; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-        <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div style="font-weight: 500; opacity: 0.9;">
-                © 2025 WorkFlowX. All rights reserved.
-            </div>
-            <div style="font-weight: 600; opacity: 0.95;">
-                Developed by <span style="color: #60a5fa;">Samuel Ogunlusi</span> & <span style="color: #60a5fa;">George Sherman</span>
-            </div>
-        </div>
-    </footer>
 </body>
 </html>

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}My Salary - WorkflowX{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2><i class="fas fa-money-bill-wave me-2 text-success"></i>My Salary & Payslips</h2>
+        <p class="text-muted">View your salary information and download payslips</p>
+    </div>
+
+    <!-- Current Salary Card -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow border-start border-success border-4">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Current Monthly Salary</h6>
+                    <h2 class="mb-0 text-success">₦{% if current_user.salary %}{{ "%.2f"|format(current_user.salary|float) }}{% else %}0.00{% endif %}</h2>
+                </div>
+            </div>
+        </div>
+        
+        {% if current_payroll %}
+        <div class="col-md-4">
+            <div class="card shadow border-start border-primary border-4">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Current Month Net Salary</h6>
+                    <h2 class="mb-0 text-primary">₦{{ "%.2f"|format(current_payroll.net_salary|float) }}</h2>
+                    <small class="text-muted">After deductions</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow border-start border-warning border-4">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Payment Status</h6>
+                    <h3 class="mb-0">
+                        {% if current_payroll.payment_status == 'paid' %}
+                            <span class="badge bg-success">Paid</span>
+                        {% elif current_payroll.payment_status == 'pending' %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ current_payroll.payment_status }}</span>
+                        {% endif %}
+                    </h3>
+                    <small class="text-muted">{{ current_payroll.pay_period_start.strftime('%B %Y') }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Payslips History -->
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Payslip History</h5>
+        </div>
+        <div class="card-body">
+            {% if payrolls %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Pay Period</th>
+                                <th>Gross Salary</th>
+                                <th>Deductions</th>
+                                <th>Net Salary</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payroll in payrolls %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <strong>{{ payroll.pay_period_start.strftime('%b %d') }} - {{ payroll.pay_period_end.strftime('%b %d, %Y') }}</strong>
+                                        <small class="text-muted">{{ payroll.pay_period_start.strftime('%B %Y') }}</small>
+                                    </div>
+                                </td>
+                                <td><strong class="text-success">₦{{ "{:,.2f}".format(payroll.gross_salary|float) }}</strong></td>
+                                <td><span class="text-danger">-₦{{ "{:,.2f}".format(payroll.total_deductions|float) }}</span></td>
+                                <td><strong class="text-primary fs-5">₦{{ "{:,.2f}".format(payroll.net_salary|float) }}</strong></td>
+                                <td>
+                                    {% if payroll.payment_status == 'paid' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Paid
+                                        </span>
+                                    {% elif payroll.payment_status == 'pending' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    {% elif payroll.payment_status == 'processing' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-spinner me-1"></i>Processing
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ payroll.payment_status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('download_payslip', payroll_id=payroll.payroll_id) }}" 
+                                       class="btn btn-sm btn-primary"
+                                       target="_blank">
+                                        <i class="fas fa-download me-1"></i>Download
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-invoice text-muted" style="font-size: 64px;"></i>
+                    <p class="text-muted mt-3">No payslips available yet</p>
+                    <p class="text-muted small">Payslips will appear here once payroll is generated</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Salary Breakdown Info -->
+    {% if current_payroll %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Earnings</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Gross Salary:</span>
+                        <strong>₦{{ "%.2f"|format(current_payroll.gross_salary|float) }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Gross Salary:</strong>
+                        <strong class="text-success">₦{{ "%.2f"|format(current_payroll.gross_salary|float) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="fas fa-minus-circle me-2"></i>Deductions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Deductions:</span>
+                        <strong>₦{{ "%.2f"|format(current_payroll.total_deductions|float) }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total Deductions:</strong>
+                        <strong class="text-danger">₦{{ "%.2f"|format((current_payroll.tax|float + current_payroll.deductions|float)) }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>NET SALARY:</strong>
+                        <strong class="text-success" style="font-size: 1.2rem;">₦{{ "%.2f"|format(current_payroll.net_salary|float) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

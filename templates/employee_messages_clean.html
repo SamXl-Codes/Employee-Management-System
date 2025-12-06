@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - WorkflowX{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header with Compose Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-envelope me-2"></i>Messages</h2>
+            <p class="text-muted mb-0">Communicate with HR and Admin</p>
+        </div>
+        <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#composeModal">
+            <i class="fas fa-plus me-2"></i>New Message
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if current_tab == 'inbox' %}active{% endif %}" href="{{ url_for('employee_messages', tab='inbox') }}">
+                <i class="fas fa-inbox me-2"></i>Inbox
+                {% if unread_count > 0 %}
+                    <span class="badge bg-danger ms-2">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_tab == 'sent' %}active{% endif %}" href="{{ url_for('employee_messages', tab='sent') }}">
+                <i class="fas fa-paper-plane me-2"></i>Sent
+            </a>
+        </li>
+    </ul>
+
+    <!-- Messages List -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            {% if messages %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th width="5%"></th>
+                                <th width="25%">{% if current_tab == 'sent' %}To{% else %}From{% endif %}</th>
+                                <th width="45%">Subject</th>
+                                <th width="15%">Date</th>
+                                <th width="10%">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for message in messages %}
+                            <tr class="{% if not message.is_read and current_tab == 'inbox' %}table-primary{% endif %}" 
+                                style="cursor: pointer;" 
+                                onclick="window.location='{{ url_for('view_message', message_id=message.message_id) }}'">
+                                <td class="text-center">
+                                    <i class="fas fa-envelope{% if not message.is_read and current_tab == 'inbox' %} text-primary{% else %}-open text-muted{% endif %}"></i>
+                                </td>
+                                <td>
+                                    <strong>
+                                        {% if current_tab == 'sent' %}
+                                            {{ message.recipient.username if message.recipient else 'Unknown' }}
+                                        {% else %}
+                                            {{ message.sender.username if message.sender else 'Admin' }}
+                                        {% endif %}
+                                    </strong>
+                                </td>
+                                <td>
+                                    <span class="{% if not message.is_read and current_tab == 'inbox' %}fw-bold{% endif %}">
+                                        {{ message.subject }}
+                                    </span>
+                                </td>
+                                <td>{{ message.sent_at.strftime('%b %d, %Y %I:%M %p') if message.sent_at else 'N/A' }}</td>
+                                <td>
+                                    {% if current_tab == 'inbox' %}
+                                        {% if message.is_read %}
+                                            <span class="badge bg-secondary">Read</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">New</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-success">Sent</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox text-muted" style="font-size: 64px;"></i>
+                    <p class="text-muted mt-3 mb-0">No messages yet</p>
+                    <p class="text-muted small">{% if current_tab == 'sent' %}Messages you send will appear here{% else %}Messages from HR and admin will appear here{% endif %}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Compose Message Modal -->
+<div class="modal fade" id="composeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('employee_send_message') }}" id="composeForm">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-pen me-2"></i>New Message to HR/Admin
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Search Recipient -->
+                    <div class="mb-4">
+                        <label for="recipient_search" class="form-label fw-bold">
+                            <i class="fas fa-user me-2"></i>To:
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="recipient_search" 
+                               placeholder="Search for HR staff or admin by name, email, or department..."
+                               autocomplete="off">
+                        <input type="hidden" id="recipient_id" name="recipient_id" required>
+                        
+                        <!-- Search Results Dropdown -->
+                        <div id="search_results" class="list-group mt-2 shadow-sm" style="display: none; max-height: 300px; overflow-y: auto; position: absolute; z-index: 1050; width: calc(100% - 3rem);">
+                        </div>
+                    </div>
+
+                    <!-- Selected Recipient Display -->
+                    <div id="selected_recipient" class="mb-4" style="display: none;">
+                        <div class="alert alert-info d-flex align-items-center">
+                            <img id="selected_photo" src="" alt="" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                            <div class="flex-grow-1">
+                                <strong id="selected_name" class="d-block"></strong>
+                                <small id="selected_email" class="text-muted"></small>
+                            </div>
+                            <button type="button" class="btn-close" onclick="clearRecipient()"></button>
+                        </div>
+                    </div>
+
+                    <!-- Subject -->
+                    <div class="mb-4">
+                        <label for="subject" class="form-label fw-bold">
+                            <i class="fas fa-heading me-2"></i>Subject:
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="subject" 
+                               name="subject" 
+                               placeholder="What is this message about?"
+                               required 
+                               maxlength="200">
+                    </div>
+
+                    <!-- Message Body -->
+                    <div class="mb-3">
+                        <label for="body" class="form-label fw-bold">
+                            <i class="fas fa-comment-dots me-2"></i>Message:
+                        </label>
+                        <textarea class="form-control form-control-lg" 
+                                  id="body" 
+                                  name="body" 
+                                  rows="8" 
+                                  placeholder="Type your message here..."
+                                  required
+                                  style="font-size: 1rem; resize: vertical;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Employee search functionality
+const employees = {{ employees|tojson }};
+const recipientSearch = document.getElementById('recipient_search');
+const searchResults = document.getElementById('search_results');
+const recipientIdInput = document.getElementById('recipient_id');
+const selectedRecipientDiv = document.getElementById('selected_recipient');
+
+recipientSearch.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase().trim();
+    
+    if (searchTerm.length < 2) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    // Filter employees
+    const filtered = employees.filter(emp => {
+        return emp.name.toLowerCase().includes(searchTerm) ||
+               emp.email.toLowerCase().includes(searchTerm) ||
+               (emp.department_name && emp.department_name.toLowerCase().includes(searchTerm));
+    });
+    
+    if (filtered.length === 0) {
+        searchResults.innerHTML = '<div class="list-group-item text-muted">No employees found</div>';
+        searchResults.style.display = 'block';
+        return;
+    }
+    
+    // Display results
+    searchResults.innerHTML = '';
+    filtered.forEach(emp => {
+        const item = document.createElement('a');
+        item.href = '#';
+        item.className = 'list-group-item list-group-item-action';
+        item.onclick = (e) => {
+            e.preventDefault();
+            selectEmployee(emp);
+        };
+        
+        const photoUrl = emp.photo_filename ? 
+            `/static/images/profiles/${emp.photo_filename}` : 
+            `/static/images/profiles/default-avatar.svg`;
+        
+        item.innerHTML = `
+            <div class="d-flex align-items-center">
+                <img src="${photoUrl}" alt="${emp.name}" class="rounded-circle me-3" 
+                     style="width: 40px; height: 40px; object-fit: cover;"
+                     onerror="this.src='/static/images/profiles/default-avatar.svg'">
+                <div>
+                    <strong class="d-block">${emp.name}</strong>
+                    <small class="text-muted">${emp.email} • ${emp.department_name || 'N/A'}</small>
+                </div>
+            </div>
+        `;
+        searchResults.appendChild(item);
+    });
+    
+    searchResults.style.display = 'block';
+});
+
+function selectEmployee(emp) {
+    if (!emp.user_id) {
+        alert('This employee does not have a user account and cannot receive messages.');
+        return;
+    }
+    
+    recipientIdInput.value = emp.user_id;
+    recipientSearch.value = emp.name;
+    searchResults.style.display = 'none';
+    
+    // Show selected employee
+    const photoUrl = emp.photo_filename ? 
+        `/static/images/profiles/${emp.photo_filename}` : 
+        `/static/images/profiles/default-avatar.svg`;
+    
+    document.getElementById('selected_photo').src = photoUrl;
+    document.getElementById('selected_name').textContent = emp.name;
+    document.getElementById('selected_email').textContent = emp.email;
+    selectedRecipientDiv.style.display = 'block';
+}
+
+function clearRecipient() {
+    recipientIdInput.value = '';
+    recipientSearch.value = '';
+    selectedRecipientDiv.style.display = 'none';
+}
+
+// Hide search results when clicking outside
+document.addEventListener('click', function(e) {
+    if (!recipientSearch.contains(e.target) && !searchResults.contains(e.target)) {
+        searchResults.style.display = 'none';
+    }
+});
+
+// Form validation
+document.getElementById('composeForm').addEventListener('submit', function(e) {
+    if (!recipientIdInput.value) {
+        e.preventDefault();
+        alert('Please select a recipient from the search results');
+        recipientSearch.focus();
+    }
+});
+</script>
+{% endblock %}

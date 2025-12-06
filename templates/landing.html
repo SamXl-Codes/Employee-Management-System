@@ -1,0 +1,379 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkFlowX - Modern Employee Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary-blue: #2563eb; --secondary-blue: #1e40af; --light-blue: #3b82f6;
+            --pale-blue: #dbeafe; --dark-blue: #1e3a8a; --gray-50: #f9fafb;
+            --gray-100: #f3f4f6; --gray-600: #4b5563; --gray-900: #111827;
+        }
+        body { font-family: ''Inter'', sans-serif; background: #ffffff; min-height: 100vh; overflow-x: hidden; color: var(--gray-900); }
+        .navbar { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 20px 0; z-index: 1000; transition: all 0.3s; }
+        .navbar.scrolled { padding: 15px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .nav-container { max-width: 1280px; margin: 0 auto; padding: 0 40px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 800; color: var(--primary-blue); text-decoration: none; }
+        .logo-icon { width: 42px; height: 42px; background: linear-gradient(135deg, var(--primary-blue), var(--light-blue)); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 20px; }
+        .nav-links { display: flex; gap: 40px; align-items: center; }
+        .nav-link { color: var(--gray-600); text-decoration: none; font-weight: 500; font-size: 15px; transition: color 0.2s; }
+        .nav-link:hover { color: var(--primary-blue); }
+        .btn-nav-signin { padding: 10px 24px; background: var(--primary-blue); color: white; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s; }
+        .btn-nav-signin:hover { background: var(--secondary-blue); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .hero { min-height: 100vh; display: flex; align-items: center; padding-top: 80px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); position: relative; overflow: hidden; }
+        .hero::before { content: ''''; position: absolute; top: -50%; right: -10%; width: 800px; height: 800px; background: radial-gradient(circle, rgba(37,99,235,0.08), transparent 70%); border-radius: 50%; }
+        .hero-container { max-width: 1280px; margin: 0 auto; padding: 0 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; position: relative; z-index: 1; }
+        .hero-content { animation: fadeInLeft 1s ease-out; }
+        @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+        .badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: white; border: 1px solid var(--pale-blue); border-radius: 50px; color: var(--primary-blue); font-size: 13px; font-weight: 600; margin-bottom: 24px; }
+        .badge svg { width: 16px; height: 16px; }
+        .hero-title { font-size: 64px; font-weight: 900; line-height: 1.1; color: var(--gray-900); margin-bottom: 24px; letter-spacing: -2px; }
+        .hero-title .highlight { background: linear-gradient(135deg, var(--primary-blue), var(--light-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-description { font-size: 20px; line-height: 1.7; color: var(--gray-600); margin-bottom: 40px; }
+        .hero-buttons { display: flex; gap: 16px; flex-wrap: wrap; }
+        .btn { padding: 16px 32px; font-size: 16px; font-weight: 600; border-radius: 12px; text-decoration: none; transition: all 0.3s; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; border: none; }
+        .btn-primary { background: var(--primary-blue); color: white; box-shadow: 0 4px 14px rgba(37,99,235,0.4); }
+        .btn-primary:hover { background: var(--secondary-blue); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37,99,235,0.5); }
+        .btn-secondary { background: white; color: var(--primary-blue); border: 2px solid var(--primary-blue); }
+        .btn-secondary:hover { background: var(--pale-blue); transform: translateY(-2px); }
+        .hero-image { position: relative; animation: fadeInRight 1s ease-out; }
+        @keyframes fadeInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+        .hero-image img { width: 100%; height: auto; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); }
+        .stats { background: white; padding: 60px 0; border-top: 1px solid var(--gray-100); position: relative; }
+        .stats::before { content: ''; position: absolute; inset: 0; background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600&q=80'); background-size: cover; background-position: center; opacity: 0.03; z-index: 0; }
+        .stats-container { position: relative; z-index: 1; }
+        .stats-container { max-width: 1280px; margin: 0 auto; padding: 0 40px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 60px; text-align: center; }
+        .stat-item { opacity: 0; animation: fadeInUp 1s ease-out forwards; }
+        .stat-item:nth-child(1) { animation-delay: 0.1s; }
+        .stat-item:nth-child(2) { animation-delay: 0.2s; }
+        .stat-item:nth-child(3) { animation-delay: 0.3s; }
+        .stat-item:nth-child(4) { animation-delay: 0.4s; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .stat-number { font-size: 48px; font-weight: 900; color: var(--primary-blue); margin-bottom: 8px; }
+        .stat-label { font-size: 16px; color: var(--gray-600); font-weight: 500; }
+        .features { padding: 120px 0; background: var(--gray-50); }
+        .feature-card { opacity: 0; }
+        .feature-card.animate { animation: fadeInScale 0.6s ease-out forwards; }
+        .feature-card:nth-child(1) { animation-delay: 0.1s; }
+        .feature-card:nth-child(2) { animation-delay: 0.2s; }
+        .feature-card:nth-child(3) { animation-delay: 0.3s; }
+        .feature-card:nth-child(4) { animation-delay: 0.4s; }
+        .feature-card:nth-child(5) { animation-delay: 0.5s; }
+        .feature-card:nth-child(6) { animation-delay: 0.6s; }
+        @keyframes fadeInScale { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .showcase-content { opacity: 0; }
+        .showcase-content.animate { animation: slideInLeft 0.8s ease-out forwards; }
+        .showcase-image { opacity: 0; }
+        .showcase-image.animate { animation: slideInRight 0.8s ease-out forwards; }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+        .showcase-list li { opacity: 0; }
+        .showcase-list li.animate { animation: fadeInUp 0.5s ease-out forwards; }
+        .showcase-list li:nth-child(1) { animation-delay: 0.2s; }
+        .showcase-list li:nth-child(2) { animation-delay: 0.3s; }
+        .showcase-list li:nth-child(3) { animation-delay: 0.4s; }
+        .showcase-list li:nth-child(4) { animation-delay: 0.5s; }
+        .section-header { text-align: center; max-width: 800px; margin: 0 auto 80px; }
+        .section-label { color: var(--primary-blue); font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .section-title { font-size: 48px; font-weight: 800; color: var(--gray-900); margin-bottom: 20px; line-height: 1.2; }
+        .section-description { font-size: 18px; color: var(--gray-600); line-height: 1.7; }
+        .features-container { max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+        .feature-card { background: white; padding: 0; border-radius: 16px; border: 1px solid var(--gray-100); transition: all 0.3s; position: relative; overflow: hidden; }
+        .feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 180px; background-size: cover; background-position: center; z-index: 0; }
+        .feature-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 180px; background: linear-gradient(to bottom, rgba(37,99,235,0.25), rgba(59,130,246,0.35)); z-index: 1; }
+        .feature-card > * { position: relative; z-index: 2; }
+        .feature-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); border-color: var(--light-blue); }
+        .feature-card:nth-child(1)::before { background-image: url('https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80'); }
+        .feature-card:nth-child(2)::before { background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=80'); }
+        .feature-card:nth-child(3)::before { background-image: url('https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&q=80'); }
+        .feature-card:nth-child(4)::before { background-image: url('https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=600&q=80'); }
+        .feature-card:nth-child(5)::before { background-image: url('https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=600&q=80'); }
+        .feature-card:nth-child(6)::before { background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80'); }
+        .feature-content { padding: 40px; }
+        .feature-image-area { height: 180px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; }
+        .feature-image-area .feature-icon { display: none; }
+        .feature-icon { width: 70px; height: 70px; background: rgba(255,255,255,0.98); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
+        .feature-icon svg { width: 36px; height: 36px; color: var(--primary-blue); stroke-width: 2.5; }
+        .feature-title { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-bottom: 12px; }
+        .feature-description { font-size: 16px; color: var(--gray-600); line-height: 1.7; }
+        .showcase { padding: 120px 0; background: white; }
+        .showcase-container { max-width: 1280px; margin: 0 auto; padding: 0 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+        .showcase-image { order: 2; }
+        .showcase-image img { width: 100%; height: auto; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); }
+        .showcase-content { order: 1; }
+        .showcase-list { list-style: none; margin-top: 32px; }
+        .showcase-list li { padding: 16px 0; display: flex; align-items: start; gap: 16px; border-bottom: 1px solid var(--gray-100); }
+        .showcase-list li:last-child { border-bottom: none; }
+        .check-icon { width: 24px; height: 24px; background: var(--primary-blue); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; margin-top: 2px; }
+        .check-icon svg { width: 14px; height: 14px; }
+        .list-content h4 { font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 4px; }
+        .list-content p { font-size: 15px; color: var(--gray-600); line-height: 1.6; }
+        .cta { padding: 120px 0; background: linear-gradient(135deg, rgba(37,99,235,0.75), rgba(30,64,175,0.8)); position: relative; overflow: hidden; }
+        .cta::before { content: ''; position: absolute; inset: 0; background-image: url('https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1600&q=80'); background-size: cover; background-position: center; opacity: 0.5; z-index: 0; }
+        .cta-container { opacity: 0; }
+        .cta-container.animate { animation: zoomIn 0.8s ease-out forwards; }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .cta::after { content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%); border-radius: 50%; z-index: 0; }
+        .cta-container { max-width: 900px; margin: 0 auto; padding: 0 40px; text-align: center; position: relative; z-index: 1; }
+        .cta-title { font-size: 52px; font-weight: 900; color: white; margin-bottom: 24px; line-height: 1.2; }
+        .cta-description { font-size: 20px; color: rgba(255,255,255,0.9); margin-bottom: 40px; line-height: 1.7; }
+        .cta-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .btn-white { background: white; color: var(--primary-blue); }
+        .btn-white:hover { background: var(--gray-50); transform: translateY(-2px); }
+        .btn-outline { background: transparent; color: white; border: 2px solid white; }
+        .btn-outline:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+        .footer { background: var(--gray-900); color: white; padding: 40px 0 30px; }
+        .footer-container { max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+        .footer-content { display: flex; justify-content: space-between; align-items: center; padding-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
+        .footer-logo { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 800; }
+        .footer-bottom { display: flex; justify-content: space-between; align-items: center; color: rgba(255,255,255,0.6); font-size: 14px; }
+        .developer-credits { font-weight: 500; }
+        .developer-credits span { color: var(--light-blue); font-weight: 600; }
+        .mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+        .mobile-menu-btn svg { width: 24px; height: 24px; color: var(--gray-900); }
+        @media (max-width: 1024px) {
+            .hero-container, .showcase-container { grid-template-columns: 1fr; gap: 60px; }
+            .hero-image { order: 2; }
+            .showcase-image { order: 1; }
+            .showcase-content { order: 2; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-container { grid-template-columns: repeat(2, 1fr); gap: 40px; }
+        }
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .mobile-menu-btn { display: block; }
+            .hero-title { font-size: 42px; }
+            .section-title { font-size: 36px; }
+            .cta-title { font-size: 36px; }
+            .features-grid { grid-template-columns: 1fr; }
+            .stats-container { grid-template-columns: 1fr; gap: 32px; }
+            .hero-buttons, .cta-buttons { flex-direction: column; width: 100%; }
+            .btn { width: 100%; justify-content: center; }
+            .nav-container, .hero-container, .features-container, .showcase-container, .cta-container, .footer-container { padding: 0 20px; }
+            .hero { padding-top: 100px; }
+            .footer-content { flex-direction: column; align-items: start; gap: 20px; }
+            .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo"><div class="logo-icon">W</div><span>WorkFlowX</span></a>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="#benefits" class="nav-link">Benefits</a>
+                <a href="#contact" class="nav-link">Contact</a>
+                <a href="/login" class="btn-nav-signin">Sign In</a>
+            </div>
+            <button class="mobile-menu-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+        </div>
+    </nav>
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="badge"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>Modern HR Solution</div>
+                <h1 class="hero-title">Transform Your <span class="highlight">Workforce Management</span></h1>
+                <p class="hero-description">Streamline HR operations, boost productivity, and empower your team with our comprehensive employee management platform. Built for modern businesses.</p>
+                <div class="hero-buttons">
+                    <a href="/login" class="btn btn-primary">Get Started <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg></a>
+                    <a href="#features" class="btn btn-secondary">Learn More</a>
+                </div>
+            </div>
+            <div class="hero-image"><img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80" alt="Team collaboration" loading="lazy"></div>
+        </div>
+    </section>
+    <section class="stats">
+        <div class="stats-container">
+            <div class="stat-item"><div class="stat-number">15+</div><div class="stat-label">Active Employees</div></div>
+            <div class="stat-item"><div class="stat-number">8+</div><div class="stat-label">Departments</div></div>
+            <div class="stat-item"><div class="stat-number">100%</div><div class="stat-label">Secure Platform</div></div>
+            <div class="stat-item"><div class="stat-number">24/7</div><div class="stat-label">System Availability</div></div>
+        </div>
+    </section>
+    <section class="features" id="features">
+        <div class="features-container">
+            <div class="section-header">
+                <div class="section-label">FEATURES</div>
+                <h2 class="section-title">Everything You Need to Manage Your Team</h2>
+                <p class="section-description">Comprehensive tools designed to simplify HR operations and enhance employee engagement across your organization.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-image-area">
+                        <div class="feature-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></div>
+                    </div>
+                    <div class="feature-content">
+                        <h3 class="feature-title">Employee Management</h3>
+                        <p class="feature-description">Complete employee database with detailed profiles, role management, and department organization for streamlined workforce coordination.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-image-area">
+                        <div class="feature-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg></div>
+                    </div>
+                    <div class="feature-content">
+                        <h3 class="feature-title">Attendance Tracking</h3>
+                        <p class="feature-description">Modern QR code-based check-in system with real-time monitoring, automated reports, and comprehensive attendance analytics.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-image-area">
+                        <div class="feature-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                    </div>
+                    <div class="feature-content">
+                        <h3 class="feature-title">Payroll Management</h3>
+                        <p class="feature-description">Automated salary calculations, tax deductions, detailed payslips, and comprehensive payroll history with secure payment tracking.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-image-area">
+                        <div class="feature-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
+                    </div>
+                    <div class="feature-content">
+                        <h3 class="feature-title">Leave Management</h3>
+                        <p class="feature-description">Streamlined leave request submission, approval workflows, balance tracking, and comprehensive leave history for all employees.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-image-area">
+                        <div class="feature-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg></div>
+                    </div>
+                    <div class="feature-content">
+                        <h3 class="feature-title">Internal Messaging</h3>
+                        <p class="feature-description">Secure communication platform for seamless interaction between employees and management with message tracking and notifications.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-image-area">
+                        <div class="feature-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
+                    </div>
+                    <div class="feature-content">
+                        <h3 class="feature-title">Analytics & Reports</h3>
+                        <p class="feature-description">Powerful dashboards with real-time insights, performance metrics, attendance reports, and comprehensive data visualization.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="showcase" id="about">
+        <div class="showcase-container">
+            <div class="showcase-content">
+                <div class="section-label">ABOUT THE SYSTEM</div>
+                <h2 class="section-title">Built for Modern Workplaces</h2>
+                <p class="section-description">WorkFlowX is a comprehensive employee management system designed to streamline HR operations, enhance productivity, and foster better workplace collaboration.</p>
+                <ul class="showcase-list">
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Centralized Employee Database</h4><p>Store and manage all employee information in one secure location with easy access and powerful search capabilities.</p></div></li>
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Automated Workflows</h4><p>Reduce manual tasks with automated payroll processing, leave approvals, and attendance tracking.</p></div></li>
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Real-Time Insights</h4><p>Make data-driven decisions with comprehensive analytics, reports, and performance metrics at your fingertips.</p></div></li>
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Secure & Compliant</h4><p>Enterprise-grade security with role-based access control, audit logs, and data protection compliance.</p></div></li>
+                </ul>
+            </div>
+            <div class="showcase-image"><img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80" alt="Dashboard Analytics" loading="lazy"></div>
+        </div>
+    </section>
+    <section class="showcase" id="benefits" style="background: var(--gray-50); padding: 100px 0;">
+        <div class="showcase-container">
+            <div class="showcase-image" style="order: 1;">
+                <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80" alt="Team Success" loading="lazy">
+            </div>
+            <div class="showcase-content" style="order: 2;">
+                <div class="section-label">WHY CHOOSE US</div>
+                <h2 class="section-title">Benefits of WorkFlowX</h2>
+                <p class="section-description" style="margin-bottom: 32px;">
+                    Experience the advantages of a modern, cloud-based employee management system designed for efficiency and growth.
+                </p>
+                <ul class="showcase-list">
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Save Time & Resources</h4><p>Automate repetitive HR tasks and reduce administrative workload by up to 70% with smart automation.</p></div></li>
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Improve Accuracy</h4><p>Eliminate manual errors in payroll calculations, attendance tracking, and leave management with automated systems.</p></div></li>
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Enhance Employee Experience</h4><p>Empower employees with self-service portals, instant access to information, and seamless communication tools.</p></div></li>
+                    <li><div class="check-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div><div class="list-content"><h4>Scale with Confidence</h4><p>Grow your business without worrying about system limitations. Easily add employees, departments, and features as needed.</p></div></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    <section class="cta" id="contact">
+        <div class="cta-container">
+            <h2 class="cta-title">Ready to Transform Your HR Operations?</h2>
+            <p class="cta-description">Join modern businesses using WorkFlowX to streamline employee management and boost workplace productivity.</p>
+            <div class="cta-buttons">
+                <a href="/login" class="btn btn-white">Sign In Now <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg></a>
+                <a href="#features" class="btn btn-outline">Explore Features</a>
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-logo"><div class="logo-icon">W</div><span>WorkFlowX</span></div>
+                <p style="color: rgba(255,255,255,0.6); max-width: 400px; font-size: 14px;">Modern employee management system built for the future of work.</p>
+            </div>
+            <div class="footer-bottom">
+                <div>&copy; 2025 WorkFlowX. All rights reserved.</div>
+                <div class="developer-credits">Developed by <span>Samuel Ogunlusi</span> & <span>George Sherman</span></div>
+            </div>
+        </div>
+    </footer>
+    <script>
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate');
+                }
+            });
+        }, observerOptions);
+
+        // Observe feature cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Observe showcase sections
+        document.querySelectorAll('.showcase-content, .showcase-image').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Observe showcase list items
+        document.querySelectorAll('.showcase-list li').forEach(li => {
+            observer.observe(li);
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Observe CTA section
+        document.querySelectorAll('.cta-container').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

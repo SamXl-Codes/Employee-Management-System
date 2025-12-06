@@ -53,8 +53,10 @@
             <div class="flex justify-between items-center min-h-16 py-2">
                 <!-- Logo -->
                 <a href="{% if session.role == 'admin' %}{{ url_for('dashboard') }}{% else %}{{ url_for('employee_dashboard') }}{% endif %}" class="flex items-center flex-shrink-0 mr-2 hover:opacity-80 transition-opacity">
-                    <div class="logo-icon text-sm sm:text-base">W</div>
-                    <div class="ml-1 sm:ml-2">
+                    <div class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg mr-2 text-white font-bold text-lg sm:text-2xl" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);">
+                        W
+                    </div>
+                    <div class="ml-1">
                         <h1 class="text-sm sm:text-lg md:text-2xl font-bold leading-tight" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">WorkFlowX</h1>
                         <p class="text-xs text-gray-600 dark:text-gray-400 hidden sm:block">Employee Management</p>
                     </div>
@@ -67,40 +69,49 @@
                         <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
                             Dashboard
                         </a>
-                        <a href="{{ url_for('employees') }}" class="nav-link {% if 'employee' in request.endpoint and 'employee_dashboard' not in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('employees') }}" class="nav-link {% if request.endpoint and 'employee' in request.endpoint and 'employee_dashboard' not in request.endpoint %}active{% endif %}">
                             Employees
                         </a>
-                        <a href="{{ url_for('departments') }}" class="nav-link {% if 'department' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('departments') }}" class="nav-link {% if request.endpoint and 'department' in request.endpoint %}active{% endif %}">
                             Departments
                         </a>
-                        <a href="{{ url_for('attendance') }}" class="nav-link {% if 'attendance' in request.endpoint and 'qr' not in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('attendance') }}" class="nav-link {% if request.endpoint and 'attendance' in request.endpoint and 'qr' not in request.endpoint %}active{% endif %}">
                             Attendance
                         </a>
-                        <a href="{{ url_for('payroll_dashboard') }}" class="nav-link {% if 'payroll' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('payroll_dashboard') }}" class="nav-link {% if request.endpoint and 'payroll' in request.endpoint %}active{% endif %}">
                             Payroll
                         </a>
-                        <a href="{{ url_for('reports') }}" class="nav-link {% if 'report' in request.endpoint or 'export' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint and ('report' in request.endpoint or 'export' in request.endpoint) %}active{% endif %}">
                             Reports
                         </a>
-                        <a href="{{ url_for('admin_settings') }}" class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin_settings') }}" class="nav-link {% if request.endpoint and 'settings' in request.endpoint %}active{% endif %}">
                             Settings
                         </a>
                     {% else %}
                         <!-- Employee Navigation -->
-                        <a href="{{ url_for('employee_dashboard') }}" class="nav-link {% if 'employee_dashboard' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                        <a href="{{ url_for('employee_dashboard') }}" class="nav-link {% if request.endpoint and 'employee_dashboard' in request.endpoint %}active{% endif %} whitespace-nowrap">
                             Dashboard
                         </a>
-                        <a href="{{ url_for('employee_profile') }}" class="nav-link {% if 'employee_profile' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                        <a href="{{ url_for('employee_profile') }}" class="nav-link {% if request.endpoint and 'employee_profile' in request.endpoint %}active{% endif %} whitespace-nowrap">
                             Profile
                         </a>
-                        <a href="{{ url_for('my_attendance') }}" class="nav-link {% if 'my_attendance' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                        <a href="{{ url_for('my_attendance') }}" class="nav-link {% if request.endpoint and 'my_attendance' in request.endpoint %}active{% endif %} whitespace-nowrap">
                             Attendance
                         </a>
-                        <a href="{{ url_for('my_leave_history') }}" class="nav-link {% if 'my_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                        <a href="{{ url_for('my_leave_history') }}" class="nav-link {% if request.endpoint and 'my_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
                             Leave History
                         </a>
-                        <a href="{{ url_for('add_leave_request') }}" class="nav-link {% if 'add_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
+                        <a href="{{ url_for('add_leave_request') }}" class="nav-link {% if request.endpoint and 'add_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
                             Request Leave
+                        </a>
+                        <a href="{{ url_for('my_salary') }}" class="nav-link {% if request.endpoint and ('my_salary' in request.endpoint or 'download_payslip' in request.endpoint) %}active{% endif %} whitespace-nowrap">
+                            My Salary
+                        </a>
+                        <a href="{{ url_for('employee_messages') }}" class="nav-link {% if request.endpoint and ('employee_messages' in request.endpoint or 'view_message' in request.endpoint) %}active{% endif %} whitespace-nowrap relative">
+                            Messages
+                            {% if unread_messages_count and unread_messages_count > 0 %}
+                            <span class="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">{{ unread_messages_count }}</span>
+                            {% endif %}
                         </a>
                     {% endif %}
                 </div>
@@ -109,7 +120,12 @@
                 <div class="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
                     <!-- Dark Mode Toggle -->
                     <button onclick="toggleDarkMode()" class="p-1.5 sm:p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Toggle Dark Mode">
-                        <span id="theme-icon" style="font-size: 1.1rem; transition: all 0.3s ease;">☀️</span>
+                        <svg id="theme-icon-sun" class="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <svg id="theme-icon-moon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
                     </button>
                     <span class="hidden sm:inline text-xs sm:text-sm font-medium" style="color: var(--text-secondary);">
                         {{ session.username }}
@@ -179,33 +195,35 @@
             
             // Update both icons (navbar and floating button)
             const icon = document.getElementById('theme-icon');
-            const fabIcon = document.getElementById('theme-icon-fab');
+            const sunIcon = document.getElementById('theme-icon-sun');
+            const moonIcon = document.getElementById('theme-icon-moon');
             
-            [icon, fabIcon].forEach(iconElement => {
-                if (iconElement) {
-                    iconElement.style.transform = 'scale(0.5) rotate(180deg)';
-                    iconElement.style.opacity = '0';
-                    
-                    setTimeout(() => {
-                        iconElement.textContent = newTheme === 'dark' ? '🌙' : '☀️';
-                        iconElement.style.transform = 'scale(1) rotate(0deg)';
-                        iconElement.style.opacity = '1';
-                    }, 150);
+            if (sunIcon && moonIcon) {
+                if (newTheme === 'dark') {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                } else {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
                 }
-            });
+            }
         }
         
         // Set initial icons
         window.addEventListener('DOMContentLoaded', function() {
             const theme = localStorage.getItem('theme') || 'light';
-            const icon = document.getElementById('theme-icon');
-            const fabIcon = document.getElementById('theme-icon-fab');
+            const sunIcon = document.getElementById('theme-icon-sun');
+            const moonIcon = document.getElementById('theme-icon-moon');
             
-            [icon, fabIcon].forEach(iconElement => {
-                if (iconElement) {
-                    iconElement.textContent = theme === 'dark' ? '🌙' : '☀️';
+            if (sunIcon && moonIcon) {
+                if (theme === 'dark') {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                } else {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
                 }
-            });
+            }
             
             // Add smooth page transition on load (only on forward navigation)
             const navigationType = performance.getEntriesByType('navigation')[0]?.type;

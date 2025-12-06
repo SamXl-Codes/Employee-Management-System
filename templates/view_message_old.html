@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{{ message.subject }} - WorkflowX{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{{ url_for('employee_messages') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Messages
+        </a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#replyModal">
+            <i class="fas fa-reply me-2"></i>Reply
+        </button>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-white border-bottom">
+            <h4 class="mb-0">{{ message.subject }}</h4>
+        </div>
+        <div class="card-body">
+            <!-- Conversation Thread -->
+            <div class="conversation-thread">
+                {% for msg in conversation %}
+                <div class="message-item mb-4 {% if msg.sender_id == session.user_id %}sent{% else %}received{% endif %}">
+                    <div class="d-flex {% if msg.sender_id == session.user_id %}flex-row-reverse{% endif %}">
+                        <!-- Profile Photo -->
+                        <div class="flex-shrink-0 {% if msg.sender_id == session.user_id %}ms-3{% else %}me-3{% endif %}">
+                            {% set sender_employee = msg.sender.employees|first if msg.sender and msg.sender.employees else None %}
+                            {% if sender_employee and sender_employee.photo_filename %}
+                                <img src="{{ url_for('static', filename='images/profiles/' + sender_employee.photo_filename) }}" 
+                                     alt="{{ msg.sender.username }}" 
+                                     class="rounded-circle"
+                                     style="width: 48px; height: 48px; object-fit: cover;">
+                            {% else %}
+                                <div class="{% if msg.sender_id == session.user_id %}bg-primary{% else %}bg-success{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width: 48px; height: 48px; font-size: 20px; font-weight: bold;">
+                                    {{ msg.sender.username[0].upper() if msg.sender else 'A' }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Message Bubble -->
+                        <div class="flex-grow-1">
+                            <div class="message-bubble {% if msg.sender_id == session.user_id %}sent-bubble{% else %}received-bubble{% endif %} p-3 rounded shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong>
+                                        {{ msg.sender.username if msg.sender else 'Admin' }}
+                                    </strong>
+                                    <small class="text-muted">
+                                        {{ msg.sent_at.strftime('%b %d, %H:%M') if msg.sent_at else 'N/A' }}
+                                    </small>
+                                </div>
+                                <div style="white-space: pre-wrap;">{{ msg.body }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reply Modal -->
+<div class="modal fade" id="replyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('employee_send_message') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-reply me-2"></i>Reply to: {{ message.subject }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="recipient_id" value="{{ message.sender_id }}">
+                    <input type="hidden" name="subject" value="Re: {{ message.subject }}">
+                    
+                    <!-- Reply To Display -->
+                    <div class="alert alert-info mb-3">
+                        <strong>Replying to:</strong> {{ message.sender.username if message.sender else 'Admin' }}
+                    </div>
+
+                    <!-- Original Message Quote -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Original Message:</strong></label>
+                        <div class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;">
+                            <small class="text-muted">{{ message.body }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Reply Body -->
+                    <div class="mb-3">
+                        <label for="reply_body" class="form-label"><strong>Your Reply:</strong></label>
+                        <textarea class="form-control" 
+                                  id="reply_body" 
+                                  name="body" 
+                                  rows="8" 
+                                  placeholder="Type your reply here..."
+                                  required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Send Reply
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.conversation-thread {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.message-bubble {
+    max-width: 75%;
+}
+
+.sent-bubble {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+    margin-left: auto;
+}
+
+.received-bubble {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+[data-theme="dark"] .received-bubble {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+.message-item.sent {
+    text-align: right;
+}
+
+.message-item.received {
+    text-align: left;
+}
+</style>
+{% endblock %}

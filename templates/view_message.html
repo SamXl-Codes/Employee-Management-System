@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block title %}{{ message.subject }} - WorkflowX{% endblock %}
+
+{% block content %}
+<style>
+    .chat-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .chat-header {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        border-radius: 16px 16px 0 0;
+        padding: 24px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    
+    .chat-header h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+    }
+    
+    .back-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+    
+    .chat-body {
+        background: #f8f9fa;
+        padding: 32px;
+        min-height: 500px;
+        max-height: 600px;
+        overflow-y: auto;
+        border-left: 1px solid #e0e0e0;
+        border-right: 1px solid #e0e0e0;
+    }
+    
+    [data-theme="dark"] .chat-body {
+        background: #1a1a1a;
+        border-color: #404040;
+    }
+    
+    .message-bubble {
+        margin-bottom: 24px;
+        display: flex;
+        align-items: flex-start;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .message-bubble.sent {
+        flex-direction: row-reverse;
+    }
+    
+    .message-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #e0e0e0;
+        flex-shrink: 0;
+    }
+    
+    [data-theme="dark"] .message-avatar {
+        border-color: #404040;
+    }
+    
+    .message-bubble.sent .message-avatar {
+        margin-left: 12px;
+    }
+    
+    .message-bubble.received .message-avatar {
+        margin-right: 12px;
+    }
+    
+    .avatar-placeholder {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 16px;
+        color: white;
+        border: 3px solid #e0e0e0;
+        flex-shrink: 0;
+    }
+    
+    .message-bubble.sent .avatar-placeholder {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        margin-left: 12px;
+    }
+    
+    .message-bubble.received .avatar-placeholder {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        margin-right: 12px;
+    }
+    
+    .message-content {
+        max-width: 65%;
+        position: relative;
+    }
+    
+    .message-bubble.sent .message-content {
+        margin-left: auto;
+    }
+    
+    .message-bubble.received .message-content {
+        margin-right: auto;
+    }
+    
+    .message-box {
+        padding: 16px 20px;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        position: relative;
+    }
+    
+    .message-bubble.sent .message-box {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .message-bubble.received .message-box {
+        background: white;
+        color: #1f2937;
+        border-bottom-left-radius: 4px;
+        border: 1px solid #e5e7eb;
+    }
+    
+    [data-theme="dark"] .message-bubble.received .message-box {
+        background: #2a2a2a;
+        color: #e5e7eb;
+        border-color: #404040;
+    }
+    
+    .message-sender {
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .message-bubble.sent .message-sender {
+        color: rgba(255, 255, 255, 0.95);
+    }
+    
+    .message-bubble.received .message-sender {
+        color: #1f2937;
+    }
+    
+    [data-theme="dark"] .message-bubble.received .message-sender {
+        color: #f3f4f6;
+    }
+    
+    .message-text {
+        font-size: 15px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    .message-time {
+        font-size: 12px;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .message-bubble.sent .message-time {
+        color: rgba(255, 255, 255, 0.8);
+        justify-content: flex-end;
+    }
+    
+    .message-bubble.received .message-time {
+        color: #6b7280;
+    }
+    
+    [data-theme="dark"] .message-bubble.received .message-time {
+        color: #9ca3af;
+    }
+    
+    .chat-footer {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-top: 2px solid #e5e7eb;
+        border-radius: 0 0 16px 16px;
+        padding: 20px 24px;
+    }
+    
+    [data-theme="dark"] .chat-footer {
+        background: #2a2a2a;
+        border-color: #404040;
+    }
+    
+    .reply-form {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+    
+    .reply-input-wrapper {
+        flex: 1;
+    }
+    
+    .reply-input {
+        width: 100%;
+        padding: 14px 18px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 15px;
+        resize: vertical;
+        min-height: 60px;
+        max-height: 150px;
+        transition: all 0.2s;
+    }
+    
+    .reply-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    }
+    
+    [data-theme="dark"] .reply-input {
+        background: #1a1a1a;
+        border-color: #404040;
+        color: #f3f4f6;
+    }
+    
+    [data-theme="dark"] .reply-input:focus {
+        border-color: #3b82f6;
+    }
+    
+    .send-btn {
+        padding: 14px 28px;
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+    
+    .send-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    }
+    
+    .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #9ca3af;
+    }
+    
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 16px;
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .message-content {
+            max-width: 85%;
+        }
+        
+        .chat-header {
+            padding: 16px;
+        }
+        
+        .chat-body {
+            padding: 20px;
+        }
+        
+        .reply-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .send-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="chat-container">
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <div>
+            <h3>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: text-top; margin-right: 8px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {{ message.subject }}
+            </h3>
+            <small style="opacity: 0.9;">Conversation Thread</small>
+        </div>
+        <a href="{{ url_for('employee_messages') }}" class="back-btn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: inline; vertical-align: middle; margin-right: 6px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+        </a>
+    </div>
+    
+    <!-- Chat Body -->
+    <div class="chat-body" id="chatBody">
+        {% if conversation %}
+            {% for msg in conversation %}
+            <div class="message-bubble {% if msg.sender_id == session.user_id %}sent{% else %}received{% endif %}">
+                <!-- Avatar -->
+                {% if msg.sender_id and user_profiles and msg.sender_id in user_profiles %}
+                    {% set profile_data = user_profiles[msg.sender_id] %}
+                    {% if profile_data.profile_image and profile_data.profile_image != 'default-avatar.png' %}
+                        <img src="{{ url_for('static', filename='images/profiles/' + profile_data.profile_image) }}" 
+                             alt="{{ profile_data.username }}" 
+                             class="message-avatar"
+                             onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="avatar-placeholder" style="display: none;">
+                            {{ profile_data.username[0]|upper }}
+                        </div>
+                    {% else %}
+                        <div class="avatar-placeholder">
+                            {{ profile_data.username[0]|upper }}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="avatar-placeholder">
+                        {{ (msg.sender.username[0] if msg.sender else 'A')|upper }}
+                    </div>
+                {% endif %}
+                
+                <!-- Message Content -->
+                <div class="message-content">
+                    <div class="message-box">
+                        <div class="message-sender">
+                            {{ msg.sender.username if msg.sender else 'Admin' }}
+                        </div>
+                        <div class="message-text">{{ msg.body }}</div>
+                        <div class="message-time">
+                            {% if msg.sender_id == session.get('user_id') %}
+                                <!-- Show read/sent status for own messages -->
+                                <svg width="14" height="14" fill="{% if msg.is_read %}#10b981{% else %}currentColor{% endif %}" viewBox="0 0 20 20">
+                                    <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                                    <path d="M12.707 5.293a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L7 8.586l4.293-4.293a1 1 0 011.414 0z"/>
+                                </svg>
+                            {% endif %}
+                            {{ msg.sent_at.strftime('%b %d, %I:%M %p') if msg.sent_at else 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">No messages yet</div>
+                <div style="font-size: 14px;">Start the conversation below</div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Chat Footer - Reply Form -->
+    <div class="chat-footer">
+        <form method="POST" action="{{ url_for('employee_send_message') }}" class="reply-form" id="replyForm">
+            <input type="hidden" name="recipient_id" value="{{ message.sender_id }}">
+            <input type="hidden" name="subject" value="Re: {{ message.subject }}">
+            
+            <div class="reply-input-wrapper">
+                <textarea class="reply-input" 
+                          name="body" 
+                          id="replyInput"
+                          placeholder="Type your message here... Press Enter to send, Shift+Enter for new line"
+                          required></textarea>
+            </div>
+            
+            <button type="submit" class="send-btn" id="sendBtn">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Send
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Auto-scroll to bottom on load
+window.addEventListener('load', function() {
+    const chatBody = document.getElementById('chatBody');
+    chatBody.scrollTop = chatBody.scrollHeight;
+});
+
+// Handle Enter key for sending (Shift+Enter for new line)
+document.getElementById('replyInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (this.value.trim()) {
+            document.getElementById('replyForm').submit();
+        }
+    }
+});
+
+// Auto-resize textarea
+const replyInput = document.getElementById('replyInput');
+replyInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
+// Disable send button when empty
+replyInput.addEventListener('input', function() {
+    document.getElementById('sendBtn').disabled = !this.value.trim();
+});
+</script>
+{% endblock %}

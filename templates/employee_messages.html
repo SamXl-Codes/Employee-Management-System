@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - WorkflowX{% endblock %}
+
+{% block content %}
+<style>
+    .message-container {
+        height: calc(100vh - 120px);
+        display: flex;
+        background: #f5f5f5;
+    }
+    
+    [data-theme="dark"] .message-container {
+        background: #1a1a1a;
+    }
+    
+    .message-sidebar {
+        width: 280px;
+        background: white;
+        border-right: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    @media (max-width: 768px) {
+        .message-container {
+            flex-direction: column;
+            height: auto;
+            min-height: calc(100vh - 120px);
+        }
+        
+        .message-sidebar {
+            width: 100%;
+            border-right: none;
+            border-bottom: 2px solid #e0e0e0;
+            max-height: 50vh;
+        }
+        
+        .message-main {
+            width: 100%;
+            min-height: 50vh;
+        }
+        
+        .compose-button {
+            margin: 16px;
+            padding: 14px 20px;
+            font-size: 15px;
+        }
+    }
+    
+    [data-theme="dark"] .message-sidebar {
+        background: #2a2a2a;
+        border-color: #404040;
+    }
+    
+    .message-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: white;
+        overflow: hidden;
+    }
+    
+    [data-theme="dark"] .message-main {
+        background: #2a2a2a;
+    }
+    
+    .message-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+    
+    .message-item {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        gap: 12px;
+        align-items: start;
+    }
+    
+    [data-theme="dark"] .message-item {
+        border-color: #404040;
+    }
+    
+    .message-item:hover {
+        background: #f8f8f8;
+    }
+    
+    [data-theme="dark"] .message-item:hover {
+        background: #333;
+    }
+    
+    .message-item.unread {
+        background: #f0f7ff;
+        font-weight: 500;
+    }
+    
+    [data-theme="dark"] .message-item.unread {
+        background: #1a3a52;
+    }
+    
+    .compose-button {
+        margin: 20px;
+        padding: 12px 24px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 24px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        transition: all 0.2s;
+    }
+    
+    .compose-button:hover {
+        background: #1d4ed8;
+        box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+    }
+    
+    .nav-item {
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+        color: #333;
+        text-decoration: none;
+    }
+    
+    [data-theme="dark"] .nav-item {
+        color: #e0e0e0;
+    }
+    
+    .nav-item:hover {
+        background: #f0f0f0;
+    }
+    
+    [data-theme="dark"] .nav-item:hover {
+        background: #333;
+    }
+    
+    .nav-item.active {
+        background: #e3f2fd;
+        color: #2563eb;
+        font-weight: 500;
+    }
+    
+    [data-theme="dark"] .nav-item.active {
+        background: #1a3a52;
+        color: #60a5fa;
+    }
+    
+    .compose-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    
+    .compose-modal.active {
+        display: flex;
+    }
+    
+    .compose-box {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    [data-theme="dark"] .compose-box {
+        background: #2a2a2a;
+    }
+    
+    .compose-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    [data-theme="dark"] .compose-header {
+        border-color: #404040;
+    }
+    
+    .compose-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .compose-field {
+        padding: 12px 24px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    [data-theme="dark"] .compose-field {
+        border-color: #404040;
+    }
+    
+    .compose-field label {
+        width: 60px;
+        color: #666;
+        font-size: 14px;
+    }
+    
+    [data-theme="dark"] .compose-field label {
+        color: #999;
+    }
+    
+    .compose-field input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        background: transparent;
+        color: #333;
+    }
+    
+    [data-theme="dark"] .compose-field input {
+        color: #e0e0e0;
+    }
+    
+    .compose-editor {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+    }
+    
+    .compose-editor textarea {
+        width: 100%;
+        height: 100%;
+        border: none;
+        outline: none;
+        resize: none;
+        font-size: 14px;
+        font-family: inherit;
+        background: transparent;
+        color: #333;
+    }
+    
+    [data-theme="dark"] .compose-editor textarea {
+        color: #e0e0e0;
+    }
+    
+    .compose-footer {
+        padding: 16px 24px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        gap: 12px;
+    }
+    
+    [data-theme="dark"] .compose-footer {
+        border-color: #404040;
+    }
+    
+    .recipient-search {
+        position: relative;
+        flex: 1;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        display: none;
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    [data-theme="dark"] .search-results {
+        background: #333;
+        border-color: #404040;
+    }
+    
+    .search-results.active {
+        display: block;
+    }
+    
+    .search-result-item {
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .search-result-item:hover {
+        background: #f0f0f0;
+    }
+    
+    [data-theme="dark"] .search-result-item:hover {
+        background: #404040;
+    }
+    
+    .selected-recipient {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: #e3f2fd;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+    
+    [data-theme="dark"] .selected-recipient {
+        background: #1a3a52;
+    }
+    
+    .selected-recipient.active {
+        display: flex;
+    }
+</style>
+
+<div class="message-container">
+    <!-- Sidebar -->
+    <div class="message-sidebar">
+        <button class="compose-button" onclick="openCompose()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Compose
+        </button>
+        
+        <div class="flex-1">
+            <a href="{{ url_for('employee_messages', tab='inbox') }}" 
+               class="nav-item {% if current_tab == 'inbox' %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <span>Inbox</span>
+                {% if unread_count > 0 %}
+                <span class="ml-auto bg-blue-600 text-white text-xs px-2 py-1 rounded-full">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+            
+            <a href="{{ url_for('employee_messages', tab='sent') }}" 
+               class="nav-item {% if current_tab == 'sent' %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                <span>Sent</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="message-main">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                {% if current_tab == 'sent' %}Sent Messages{% else %}Inbox{% endif %}
+            </h2>
+        </div>
+        
+        <div class="message-list">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="message-item {% if not message.is_read and current_tab == 'inbox' %}unread{% endif %}"
+                     onclick="window.location.href='{{ url_for('view_message', message_id=message.message_id) }}'">
+                    <!-- Profile Photo -->
+                    <div class="flex-shrink-0">
+                        {% if current_tab == 'sent' and message.recipient %}
+                            {% set recipient_employee = message.recipient.employees|first if message.recipient.employees else None %}
+                            {% if recipient_employee and recipient_employee.profile_image %}
+                                <img src="{{ url_for('static', filename='images/profiles/' + recipient_employee.profile_image) }}" 
+                                     alt="{{ message.recipient.username }}" 
+                                     class="w-12 h-12 rounded-full object-cover">
+                            {% else %}
+                                <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-lg">
+                                    {{ message.recipient.username[0].upper() if message.recipient else 'A' }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            {% set sender_employee = message.sender.employees|first if message.sender and message.sender.employees else None %}
+                            {% if sender_employee and sender_employee.profile_image %}
+                                <img src="{{ url_for('static', filename='images/profiles/' + sender_employee.profile_image) }}" 
+                                     alt="{{ message.sender.username }}" 
+                                     class="w-12 h-12 rounded-full object-cover">
+                            {% else %}
+                                <div class="w-12 h-12 rounded-full bg-green-600 text-white flex items-center justify-center font-semibold text-lg">
+                                    {{ message.sender.username[0].upper() if message.sender else 'A' }}
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Message Content -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start mb-1">
+                            <div class="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                {% if current_tab == 'sent' %}
+                                    To: {{ message.recipient.username if message.recipient else 'Unknown' }}
+                                {% else %}
+                                    {{ message.sender.username if message.sender else 'Admin' }}
+                                {% endif %}
+                                {% if message.is_broadcast %}
+                                    <span class="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                                        Broadcast
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
+                                {{ message.sent_at.strftime('%b %d') if message.sent_at else 'N/A' }}
+                            </span>
+                        </div>
+                        <div class="font-medium text-gray-800 dark:text-gray-200 mb-1 truncate flex items-center gap-2">
+                            {{ message.subject }}
+                            {% if current_tab == 'sent' %}
+                                <span class="flex-shrink-0 {% if message.is_read %}text-green-500{% else %}text-gray-400{% endif %}" title="{% if message.is_read %}Read{% else %}Sent{% endif %}">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                                        <path d="M12.707 5.293a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L7 8.586l4.293-4.293a1 1 0 011.414 0z"/>
+                                    </svg>
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {{ message.body[:100] }}{% if message.body|length > 100 %}...{% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Unread Indicator -->
+                    {% if not message.is_read and current_tab == 'inbox' %}
+                    <div class="flex-shrink-0">
+                        <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                    <svg class="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <h5 class="text-lg font-medium mb-2">
+                        {% if current_tab == 'sent' %}No sent messages yet{% else %}Your inbox is empty{% endif %}
+                    </h5>
+                    <p class="text-sm">
+                        {% if current_tab == 'sent' %}
+                            Click "Compose" to send your first message
+                        {% else %}
+                            Messages from HR and Employees will appear here
+                        {% endif %}
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Compose Modal -->
+<div class="compose-modal" id="composeModal">
+    <div class="compose-box">
+        <div class="compose-header">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">New Message</h3>
+            <button onclick="closeCompose()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <form method="POST" action="{{ url_for('employee_send_message') }}" id="composeForm">
+            <div class="compose-body">
+                <div class="compose-field">
+                    <label>To:</label>
+                    <div class="selected-recipient" id="selectedRecipient" style="margin-left: 8px;">
+                        <img id="selectedPhoto" class="w-8 h-8 rounded-full" src="" alt="">
+                        <span id="selectedName"></span>
+                        <button type="button" onclick="clearRecipient()" class="ml-2 text-gray-500 hover:text-gray-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="recipient-search">
+                        <input type="text" 
+                               id="recipientSearch" 
+                               placeholder="Search employee or HR staff..."
+                               autocomplete="off"
+                               oninput="searchRecipients(this.value)">
+                        <input type="hidden" name="recipient_id" id="recipientId">
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                </div>
+                
+                <div class="compose-field">
+                    <label>Subject:</label>
+                    <input type="text" name="subject" placeholder="Subject" required>
+                </div>
+                
+                <div class="compose-editor">
+                    <textarea name="body" placeholder="Write your message here..." required></textarea>
+                </div>
+            </div>
+            
+            <div class="compose-footer">
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Send
+                </button>
+                <button type="button" onclick="closeCompose()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const employees = {{ employees|tojson }};
+    
+    function openCompose() {
+        document.getElementById('composeModal').classList.add('active');
+        document.getElementById('recipientSearch').focus();
+    }
+    
+    function closeCompose() {
+        document.getElementById('composeModal').classList.remove('active');
+        document.getElementById('composeForm').reset();
+        clearRecipient();
+    }
+    
+    function searchRecipients(query) {
+        const results = document.getElementById('searchResults');
+        
+        if (query.length < 2) {
+            results.classList.remove('active');
+            return;
+        }
+        
+        const filtered = employees.filter(emp => 
+            emp.name.toLowerCase().includes(query.toLowerCase()) ||
+            emp.email.toLowerCase().includes(query.toLowerCase()) ||
+            (emp.department_name && emp.department_name.toLowerCase().includes(query.toLowerCase()))
+        );
+        
+        if (filtered.length === 0) {
+            results.innerHTML = '<div class="p-4 text-gray-500 text-center">No employees found</div>';
+            results.classList.add('active');
+            return;
+        }
+        
+        results.innerHTML = filtered.map(emp => `
+            <div class="search-result-item" onclick="selectRecipient(${emp.user_id}, '${emp.name}', '${emp.email}', '${emp.profile_image || ''}')">
+                ${emp.profile_image ? 
+                    `<img src="/static/images/profiles/${emp.profile_image}" class="w-10 h-10 rounded-full object-cover" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${emp.name[0].toUpperCase()}</div>'">` :
+                    `<div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${emp.name[0].toUpperCase()}</div>`
+                }
+                <div class="flex-1 min-w-0">
+                    <div class="font-medium text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        results.classList.add('active');
+    }
+    
+    function selectRecipient(userId, name, email, photo) {
+        document.getElementById('recipientId').value = userId;
+        document.getElementById('recipientSearch').value = '';
+        document.getElementById('searchResults').classList.remove('active');
+        
+        // Hide search input, show selected recipient
+        document.querySelector('.recipient-search').style.display = 'none';
+        
+        const selectedDiv = document.getElementById('selectedRecipient');
+        const selectedPhoto = document.getElementById('selectedPhoto');
+        const selectedName = document.getElementById('selectedName');
+        
+        if (photo) {
+            selectedPhoto.src = `/static/images/profiles/${photo}`;
+            selectedPhoto.style.display = 'block';
+            selectedPhoto.className = 'w-8 h-8 rounded-full object-cover';
+            selectedPhoto.onerror = function() {
+                this.outerHTML = `<div id="selectedPhoto" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${name[0].toUpperCase()}</div>`;
+            };
+        } else {
+            selectedPhoto.outerHTML = `<div id="selectedPhoto" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${name[0].toUpperCase()}</div>`;
+        }
+        
+        selectedName.textContent = `${name} (${email})`;
+        selectedDiv.classList.add('active');
+    }
+    
+    function clearRecipient() {
+        document.getElementById('recipientId').value = '';
+        document.getElementById('selectedRecipient').classList.remove('active');
+        // Show search input again
+        document.querySelector('.recipient-search').style.display = 'block';
+        document.getElementById('recipientSearch').focus();
+    }
+    
+    // Close search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.recipient-search')) {
+            document.getElementById('searchResults').classList.remove('active');
+        }
+    });
+    
+    // Form validation
+    document.getElementById('composeForm').addEventListener('submit', function(e) {
+        if (!document.getElementById('recipientId').value) {
+            e.preventDefault();
+            alert('Please select a recipient from the search results');
+            return false;
+        }
+    });
+    
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeCompose();
+        }
+    });
+</script>
+{% endblock %}

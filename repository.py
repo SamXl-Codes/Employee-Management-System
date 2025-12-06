@@ -716,13 +716,14 @@ def get_leave_request_by_id(leave_id: int) -> Optional[LeaveRequest]:
         return None
 
 
-def update_leave_status(leave_id: int, status: str) -> tuple:
+def update_leave_status(leave_id: int, status: str, hr_notes: str = None) -> tuple:
     """
-    Update leave request status (approve or reject).
+    Update leave request status (approve or reject) with optional HR notes.
     
     Args:
         leave_id: Leave request ID
         status: New status ('Approved' or 'Rejected')
+        hr_notes: Optional notes from HR explaining decision
         
     Returns:
         tuple: (success: bool, message: str)
@@ -732,6 +733,10 @@ def update_leave_status(leave_id: int, status: str) -> tuple:
         
         if not leave_request:
             return False, "Leave request not found"
+        
+        # Update HR notes if provided
+        if hr_notes:
+            leave_request.hr_notes = hr_notes
         
         if status == 'Approved':
             leave_request.approve()

@@ -34,9 +34,23 @@ import qrcode
 import io
 import base64
 import secrets
+import socket
 
 # Global storage for QR tokens (in production, use Redis or database)
 qr_tokens = {}
+
+def get_local_ip():
+    """Automatically detect the local network IP address."""
+    try:
+        # Create a socket connection to determine the local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Connect to an external address (doesn't actually send data)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        return "127.0.0.1"  # Fallback to localhost if detection fails
 
 def get_or_create_qr_token(date_str):
     """Get existing QR token for date or create new one. Auto-cleans old tokens."""
@@ -183,7 +197,7 @@ def admin_required(f):
 
 @app.route('/')
 def index():
-    """Redirect to login or dashboard."""
+    """Show landing page or redirect to dashboard if logged in."""
     # If user is logged in, go to dashboard
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
@@ -192,10 +206,8 @@ def index():
         else:
             session.clear()
     
-    # Go directly to login - skip loading screen
-    return redirect(url_for('login'))
-    
-    return redirect(url_for('login'))
+    # Show landing page
+    return render_template('landing.html')
 
 
 @app.route('/set_loading_shown')
@@ -880,13 +892,14 @@ def add_leave_request():
 @app.route('/leave-requests/update/<int:leave_id>', methods=['POST'])
 @admin_required
 def update_leave_request(leave_id):
-    """Approve or reject leave request."""
+    """Approve or reject leave request with optional HR notes."""
     action = request.form.get('action')
+    hr_notes = request.form.get('hr_notes', '').strip()
     
     if action == 'approve':
-        success, message = repo.update_leave_status(leave_id, 'Approved')
+        success, message = repo.update_leave_status(leave_id, 'Approved', hr_notes=hr_notes)
     elif action == 'reject':
-        success, message = repo.update_leave_status(leave_id, 'Rejected')
+        success, message = repo.update_leave_status(leave_id, 'Rejected', hr_notes=hr_notes)
     else:
         flash('Invalid action', 'danger')
         return redirect(url_for('leave_requests'))
@@ -910,6 +923,17 @@ def update_leave_request(leave_id):
         flash(message, 'danger')
     
     return redirect(url_for('leave_requests'))
+
+
+@app.route('/leave-requests/view/<int:leave_id>')
+@admin_required
+def view_leave_request(leave_id):
+    """View detailed leave request with HR notes and history."""
+    leave = LeaveRequest.query.get_or_404(leave_id)
+    user = repo.get_user_by_id(session['user_id'])
+    
+    log_audit('VIEW', 'LeaveRequest', leave_id, 'Viewed leave request details')
+    return render_template('leave_request_detail.html', user=user, leave=leave)
 
 
 # ==================== REPORTS & EXPORTS ====================
@@ -1931,6 +1955,184 @@ def employee_profile():
     return render_template('employee_profile.html', current_user=emp)
 
 
+@app.route('/employee/salary')
+@login_required
+def my_salary():
+    """View employee's own salary and payslips."""
+    try:
+        from models import Payroll
+        user = repo.get_user_by_id(session['user_id'])
+        
+        # Try to find employee by exact email match
+        emp = Employee.query.filter_by(email=user.username).first()
+        
+        # If not found, try with @company.com or @workflowx.com
+        if not emp:
+            emp = Employee.query.filter(
+                (Employee.email == user.username + '@company.com') |
+                (Employee.email == user.username + '@workflowx.com')
+            ).first()
+        
+        # If still not found, show error
+        if not emp:
+            flash('Your employee profile is not linked to this account. Please contact HR.', 'danger')
+            return redirect(url_for('logout'))
+        
+        # Get all payroll records for this employee
+        payrolls = Payroll.query.filter_by(employee_id=emp.employee_id)\
+            .order_by(Payroll.pay_period_end.desc()).all()
+        
+        # Get latest payroll for detailed breakdown
+        latest_payroll = payrolls[0] if payrolls else None
+        
+        # Calculate salary breakdown (assuming monthly salary)
+        salary_breakdown = None
+        if latest_payroll:
+            from decimal import Decimal
+            gross = float(latest_payroll.gross_salary)
+            # Calculate components as percentages of gross salary
+            basic_salary = gross * 0.65  # 65% basic
+            housing_allowance = gross * 0.15  # 15% housing
+            transport_allowance = gross * 0.10  # 10% transport
+            meal_allowance = gross * 0.10  # 10% meal
+            
+            # Deductions breakdown
+            total_ded = float(latest_payroll.total_deductions)
+            pension = total_ded * 0.50  # 50% pension (8% of gross)
+            tax = total_ded * 0.35  # 35% tax
+            nhis = total_ded * 0.10  # 10% health insurance
+            other_ded = total_ded * 0.05  # 5% other
+            
+            # Annual calculations
+            annual_gross = gross * 12
+            annual_net = float(latest_payroll.net_salary) * 12
+            annual_deductions = total_ded * 12
+            
+            salary_breakdown = {
+                'basic_salary': basic_salary,
+                'housing_allowance': housing_allowance,
+                'transport_allowance': transport_allowance,
+                'meal_allowance': meal_allowance,
+                'pension': pension,
+                'tax': tax,
+                'nhis': nhis,
+                'other_deductions': other_ded,
+                'annual_gross': annual_gross,
+                'annual_net': annual_net,
+                'annual_deductions': annual_deductions
+            }
+        
+        log_audit('VIEW', 'Salary', emp.employee_id, f'Employee viewed salary')
+        return render_template('my_salary.html', 
+                             current_user=emp,
+                             payrolls=payrolls,
+                             latest_payroll=latest_payroll,
+                             salary_breakdown=salary_breakdown)
+    except Exception as e:
+        flash(f'Error loading salary information: {str(e)}', 'danger')
+        return redirect(url_for('employee_dashboard'))
+
+
+@app.route('/employee/payslip/<int:payroll_id>/download')
+@login_required
+def download_payslip(payroll_id):
+    """Download payslip as PDF."""
+    try:
+        from models import Payroll
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib import colors
+        import io
+        
+        user = repo.get_user_by_id(session['user_id'])
+        emp = Employee.query.filter_by(email=user.username).first()
+        
+        if not emp:
+            flash('Employee profile not found', 'danger')
+            return redirect(url_for('my_salary'))
+        
+        payroll = Payroll.query.get_or_404(payroll_id)
+        
+        # Verify this payroll belongs to the logged-in employee
+        if payroll.employee_id != emp.employee_id:
+            flash('Unauthorized access', 'danger')
+            return redirect(url_for('my_salary'))
+        
+        # Create PDF
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title = Paragraph(f"<b>PAYSLIP</b>", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+        
+        # Company and Employee Info
+        info_data = [
+            ['WorkFlowX', ''],
+            ['', ''],
+            ['Employee Name:', emp.name],
+            ['Employee ID:', f'WFX-{emp.employee_id:04d}'],
+            ['Department:', emp.department.name if emp.department else 'N/A'],
+            ['Pay Period:', f'{payroll.pay_period_start.strftime("%b %d, %Y")} - {payroll.pay_period_end.strftime("%b %d, %Y")}'],
+        ]
+        
+        info_table = Table(info_data, colWidths=[200, 300])
+        info_table.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, -1), 'Helvetica', 10),
+            ('FONT', (0, 0), (0, 0), 'Helvetica-Bold', 16),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 20))
+        
+        # Earnings and Deductions
+        payment_data = [
+            ['Description', 'Amount'],
+            ['Gross Salary', f'₦{payroll.gross_salary:,.2f}'],
+            ['', ''],
+            ['Deductions', ''],
+            ['Total Deductions', f'₦{payroll.total_deductions:,.2f}'],
+            ['', ''],
+            ['Net Salary', f'₦{payroll.net_salary:,.2f}'],
+        ]
+        
+        payment_table = Table(payment_data, colWidths=[300, 200])
+        payment_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(payment_table)
+        
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
+        
+        log_audit('DOWNLOAD', 'Payslip', payroll_id, f'Employee downloaded payslip')
+        
+        return make_response(
+            buffer.getvalue(),
+            200,
+            {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': f'attachment; filename=payslip_{emp.name}_{payroll.pay_period_end.strftime("%b_%Y")}.pdf'
+            }
+        )
+    except Exception as e:
+        flash(f'Error generating payslip: {str(e)}', 'danger')
+        return redirect(url_for('my_salary'))
+
+
 @app.route('/employee/profile/update', methods=['GET', 'POST'])
 @login_required
 def update_my_profile():
@@ -2163,7 +2365,7 @@ def admin_qr_checkin():
     
     # Create check-in URL with network IP (not localhost)
     # Force use of network IP so it works on mobile devices
-    network_ip = "192.168.1.71:8080"
+    network_ip = f"{get_local_ip()}:8080"
     checkin_url = f"http://{network_ip}/checkin/{token}?date={today}"
     
     # Generate QR code
@@ -2342,12 +2544,14 @@ def submit_qr_checkin():
         
         # Log the action
         log_audit('CREATE', 'Attendance', attendance.attendance_id, 
-                 f'Employee {emp.first_name} {emp.last_name} checked in via QR code - {status}')
+                 f'Employee {emp.name} checked in via QR code - {status}')
         
         flash(f'Check-in successful! Status: {status} at {check_in_time.strftime("%I:%M %p")}', 'success')
         
-        # Redirect back to QR page to show check-out option
-        return redirect(f'/checkin/{token}?date={checkin_date_str}')
+        # Clear pending session data and redirect to employee dashboard
+        session.pop('pending_checkin_token', None)
+        session.pop('pending_checkin_date', None)
+        return redirect(url_for('employee_dashboard'))
         
     except Exception as e:
         db.session.rollback()
@@ -2454,6 +2658,90 @@ def employee_checkout():
 
 
 # ==================== PAYROLL MANAGEMENT ROUTES ====================
+
+@app.route('/payroll/regenerate-all', methods=['POST'])
+@login_required
+def regenerate_all_payroll():
+    """Regenerate all payroll records for all employees from hire date to current month."""
+    from models import Payroll
+    if session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        from datetime import date
+        from decimal import Decimal
+        import calendar
+        from dateutil.relativedelta import relativedelta
+        from models import Deduction
+        
+        # Delete deductions first (FK constraint), then payroll records
+        Deduction.query.delete()
+        db.session.commit()
+        
+        Payroll.query.delete()
+        db.session.commit()
+        
+        # Get all employees
+        employees = Employee.query.all()
+        company_start = date(2024, 1, 1)
+        today = date.today()
+        total_records = 0
+        
+        for emp in employees:
+            if not emp.salary:
+                continue
+            
+            # Calculate monthly salary from annual salary
+            annual_salary = Decimal(str(emp.salary))
+            monthly_gross = annual_salary / 12
+            
+            # Start from employee's hire date or company start, whichever is later
+            start_from = max(emp.date_joined, company_start)
+            current_date = start_from
+            
+            # Generate payroll from start date to current month
+            while current_date <= today:
+                last_day = calendar.monthrange(current_date.year, current_date.month)[1]
+                period_start = date(current_date.year, current_date.month, 1)
+                period_end = date(current_date.year, current_date.month, last_day)
+                
+                # Calculate realistic deductions
+                pension = monthly_gross * Decimal('0.055')  # 5.5%
+                income_tax = monthly_gross * Decimal('0.10')  # 10%
+                health_insurance = monthly_gross * Decimal('0.025')  # 2.5%
+                total_deductions = pension + income_tax + health_insurance
+                monthly_net = monthly_gross - total_deductions
+                
+                payroll = Payroll(
+                    employee_id=emp.employee_id,
+                    pay_period_start=period_start,
+                    pay_period_end=period_end,
+                    gross_salary=monthly_gross
+                )
+                # Set additional attributes after initialization
+                payroll.total_deductions = total_deductions
+                payroll.net_salary = monthly_net
+                payroll.payment_date = period_end
+                payroll.payment_status = 'paid'
+                
+                db.session.add(payroll)
+                total_records += 1
+                
+                # Move to next month
+                current_date = (current_date + relativedelta(months=1)).replace(day=1)
+        
+        db.session.commit()
+        
+        log_audit('CREATE', 'Payroll', None, f'Initialized {total_records} payroll records from Jan 2024 for all employees')
+        flash(f'Successfully initialized {total_records} payroll records for {len(employees)} employees from January 2024 to present!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error regenerating payroll: {str(e)}', 'danger')
+    
+    return redirect(url_for('payroll_dashboard'))
+
 
 @app.route('/payroll')
 @login_required
@@ -3106,6 +3394,237 @@ def manage_shifts():
     user = repo.get_user_by_id(session['user_id'])
     shifts = Shift.query.all()
     return render_template('shift_manager.html', user=user, shifts=shifts)
+
+
+# ==================== MESSAGING SYSTEM ====================
+
+@app.route('/admin/messages')
+@admin_required
+def admin_messages():
+    """Admin view all sent messages (broadcast and specific)."""
+    from models import Message
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Get all messages sent by admin
+    sent_messages = Message.query.filter_by(sender_id=session['user_id'])\
+        .order_by(Message.sent_at.desc()).all()
+    
+    # Get all employees for compose modal (search) - convert to dict
+    employees = Employee.query.order_by(Employee.name).all()
+    employees_data = [emp.to_dict() for emp in employees]
+    
+    log_audit('VIEW', 'Messages', None, 'Admin viewed sent messages')
+    return render_template('admin_messages.html', user=user, messages=sent_messages, employees_data=employees_data)
+
+
+@app.route('/admin/messages/compose', methods=['GET', 'POST'])
+@admin_required
+def compose_message():
+    """Admin compose and send message (specific or broadcast)."""
+    from models import Message
+    
+    if request.method == 'POST':
+        message_type = request.form.get('message_type')  # 'specific' or 'broadcast'
+        subject = request.form.get('subject')
+        body = request.form.get('body')
+        
+        if not subject or not body:
+            flash('Subject and message body are required', 'danger')
+            return redirect(url_for('compose_message'))
+        
+        try:
+            if message_type == 'broadcast':
+                # Send to all employees
+                employees = Employee.query.all()
+                sent_count = 0
+                for emp in employees:
+                    # Find user by matching email
+                    user = User.query.filter_by(username=emp.email).first()
+                    if user:
+                        message = Message(
+                            sender_id=session['user_id'],
+                            recipient_id=user.user_id,
+                            subject=subject,
+                            body=body,
+                            is_broadcast=True
+                        )
+                        db.session.add(message)
+                        sent_count += 1
+                
+                db.session.commit()
+                log_audit('CREATE', 'Message', None, f'Broadcast message: {subject}')
+                flash(f'Broadcast message sent to {sent_count} employees', 'success')
+                
+            else:  # specific employee
+                recipient_id = request.form.get('recipient_id')
+                if not recipient_id:
+                    flash('Please select a recipient', 'danger')
+                    return redirect(url_for('compose_message'))
+                
+                message = Message(
+                    sender_id=session['user_id'],
+                    recipient_id=int(recipient_id),
+                    subject=subject,
+                    body=body,
+                    is_broadcast=False
+                )
+                db.session.add(message)
+                db.session.commit()
+                
+                log_audit('CREATE', 'Message', message.message_id, f'Message sent: {subject}')
+                flash('Message sent successfully', 'success')
+            
+            return redirect(url_for('admin_messages'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error sending message: {str(e)}', 'danger')
+            return redirect(url_for('compose_message'))
+    
+    # GET request - show compose form
+    user = repo.get_user_by_id(session['user_id'])
+    employees = Employee.query.order_by(Employee.name).all()
+    employees_data = [emp.to_dict() for emp in employees]
+    return render_template('compose_message.html', user=user, employees=employees_data)
+
+
+@app.route('/employee/messages')
+@login_required
+def employee_messages():
+    """Employee Gmail-style messaging interface (inbox, sent, compose)."""
+    from models import Message
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Get tab parameter (inbox or sent)
+    tab = request.args.get('tab', 'inbox')
+    
+    if tab == 'sent':
+        # Get messages sent by this employee
+        messages = Message.query.filter_by(sender_id=session['user_id'])\
+            .order_by(Message.sent_at.desc()).all()
+    else:  # inbox
+        # Get messages received by this employee
+        messages = Message.query.filter_by(recipient_id=session['user_id'])\
+            .order_by(Message.sent_at.desc()).all()
+    
+    # Count unread messages
+    unread_count = Message.query.filter_by(recipient_id=session['user_id'], is_read=False).count()
+    
+    # Get all employees for compose modal (search) - convert to dict
+    employees = Employee.query.order_by(Employee.name).all()
+    employees_data = [emp.to_dict() for emp in employees]
+    
+    log_audit('VIEW', 'Messages', None, f'Employee viewed messages ({tab})')
+    return render_template('employee_messages.html', 
+                          user=user, 
+                          messages=messages, 
+                          unread_count=unread_count,
+                          employees=employees_data,
+                          current_tab=tab)
+
+
+@app.route('/employee/messages/<int:message_id>')
+@login_required
+def view_message(message_id):
+    """View specific message and mark as read."""
+    from models import Message
+    message = Message.query.get_or_404(message_id)
+    
+    # Ensure user can view messages they sent OR received
+    if message.recipient_id != session['user_id'] and message.sender_id != session['user_id']:
+        flash('Unauthorized access', 'danger')
+        return redirect(url_for('employee_messages'))
+    
+    # Mark as read if not already (only for received messages)
+    if message.recipient_id == session['user_id'] and not message.is_read:
+        message.mark_as_read()
+        db.session.commit()
+    
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Get conversation thread (all messages between these two users)
+    conversation = Message.query.filter(
+        ((Message.sender_id == message.sender_id) & (Message.recipient_id == message.recipient_id)) |
+        ((Message.sender_id == message.recipient_id) & (Message.recipient_id == message.sender_id))
+    ).order_by(Message.sent_at.asc()).all()
+    
+    # Get employee profiles for all users in conversation
+    user_ids = set([msg.sender_id for msg in conversation if msg.sender_id])
+    user_profiles = {}
+    for uid in user_ids:
+        u = User.query.get(uid)
+        if u:
+            emp = Employee.query.filter_by(email=u.username).first()
+            user_profiles[uid] = {'username': u.username, 'profile_image': emp.profile_image if emp else 'default-avatar.png'}
+    
+    return render_template('view_message.html', user=user, message=message, conversation=conversation, user_profiles=user_profiles)
+
+
+@app.route('/admin/message/<int:message_id>')
+@admin_required
+def admin_view_message(message_id):
+    """Admin view sent message."""
+    from models import Message
+    message = Message.query.get_or_404(message_id)
+    
+    # Ensure admin can only view messages they sent
+    if message.sender_id != session['user_id']:
+        flash('Unauthorized access', 'danger')
+        return redirect(url_for('admin_messages'))
+    
+    user = repo.get_user_by_id(session['user_id'])
+    
+    # Get conversation thread
+    conversation = Message.query.filter(
+        ((Message.sender_id == message.sender_id) & (Message.recipient_id == message.recipient_id)) |
+        ((Message.sender_id == message.recipient_id) & (Message.recipient_id == message.sender_id))
+    ).order_by(Message.sent_at.asc()).all()
+    
+    # Get employee profiles for all users in conversation
+    user_ids = set([msg.sender_id for msg in conversation if msg.sender_id])
+    user_profiles = {}
+    for uid in user_ids:
+        u = User.query.get(uid)
+        if u:
+            emp = Employee.query.filter_by(email=u.username).first()
+            user_profiles[uid] = {'username': u.username, 'profile_image': emp.profile_image if emp else 'default-avatar.png'}
+    
+    return render_template('admin_view_message.html', user=user, message=message, conversation=conversation, user_profiles=user_profiles)
+
+
+@app.route('/employee/messages/send', methods=['POST'])
+@login_required
+def employee_send_message():
+    """Employee send message to HR/Admin or reply to existing message."""
+    from models import Message
+    
+    recipient_id = request.form.get('recipient_id')
+    subject = request.form.get('subject')
+    body = request.form.get('body')
+    
+    if not recipient_id or not subject or not body:
+        flash('All fields are required', 'danger')
+        return redirect(url_for('employee_messages'))
+    
+    try:
+        message = Message(
+            sender_id=session['user_id'],
+            recipient_id=int(recipient_id),
+            subject=subject,
+            body=body,
+            is_broadcast=False
+        )
+        db.session.add(message)
+        db.session.commit()
+        
+        log_audit('CREATE', 'Message', message.message_id, f'Employee sent message: {subject}')
+        flash('Message sent successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error sending message: {str(e)}', 'danger')
+    
+    return redirect(url_for('employee_messages', tab='sent'))
 
 
 # ==================== ERROR HANDLERS ====================

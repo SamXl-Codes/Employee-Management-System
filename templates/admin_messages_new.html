@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - WorkflowX{% endblock %}
+
+{% block content %}
+<style>
+    .message-container {
+        height: calc(100vh - 120px);
+        display: flex;
+        background: #f5f5f5;
+    }
+    
+    [data-theme="dark"] .message-container {
+        background: #1a1a1a;
+    }
+    
+    .message-sidebar {
+        width: 280px;
+        background: white;
+        border-right: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    [data-theme="dark"] .message-sidebar {
+        background: #2a2a2a;
+        border-color: #404040;
+    }
+    
+    .message-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: white;
+        overflow: hidden;
+    }
+    
+    [data-theme="dark"] .message-main {
+        background: #2a2a2a;
+    }
+    
+    .message-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+    
+    .message-item {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        gap: 12px;
+        align-items: start;
+    }
+    
+    [data-theme="dark"] .message-item {
+        border-color: #404040;
+    }
+    
+    .message-item:hover {
+        background: #f8f8f8;
+    }
+    
+    [data-theme="dark"] .message-item:hover {
+        background: #333;
+    }
+    
+    .compose-button {
+        margin: 20px;
+        padding: 12px 24px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 24px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        transition: all 0.2s;
+    }
+    
+    .compose-button:hover {
+        background: #1d4ed8;
+        box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+    }
+    
+    .compose-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    
+    .compose-modal.active {
+        display: flex;
+    }
+    
+    .compose-box {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    [data-theme="dark"] .compose-box {
+        background: #2a2a2a;
+    }
+    
+    .compose-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    [data-theme="dark"] .compose-header {
+        border-color: #404040;
+    }
+    
+    .compose-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .compose-field {
+        padding: 12px 24px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    [data-theme="dark"] .compose-field {
+        border-color: #404040;
+    }
+    
+    .compose-field label {
+        width: 80px;
+        color: #666;
+        font-size: 14px;
+    }
+    
+    [data-theme="dark"] .compose-field label {
+        color: #999;
+    }
+    
+    .compose-field input, .compose-field select {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        background: transparent;
+        color: #333;
+        padding: 4px;
+    }
+    
+    [data-theme="dark"] .compose-field input,
+    [data-theme="dark"] .compose-field select {
+        color: #e0e0e0;
+    }
+    
+    .compose-editor {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+    }
+    
+    .compose-editor textarea {
+        width: 100%;
+        height: 100%;
+        min-height: 300px;
+        border: none;
+        outline: none;
+        resize: none;
+        font-size: 14px;
+        font-family: inherit;
+        background: transparent;
+        color: #333;
+    }
+    
+    [data-theme="dark"] .compose-editor textarea {
+        color: #e0e0e0;
+    }
+    
+    .compose-footer {
+        padding: 16px 24px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        gap: 12px;
+    }
+    
+    [data-theme="dark"] .compose-footer {
+        border-color: #404040;
+    }
+    
+    .message-type-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .message-type-tab {
+        flex: 1;
+        padding: 8px 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+    
+    [data-theme="dark"] .message-type-tab {
+        background: #333;
+        border-color: #404040;
+        color: #e0e0e0;
+    }
+    
+    .message-type-tab:hover {
+        background: #f0f0f0;
+    }
+    
+    [data-theme="dark"] .message-type-tab:hover {
+        background: #404040;
+    }
+    
+    .message-type-tab.active {
+        background: #2563eb;
+        color: white;
+        border-color: #2563eb;
+    }
+    
+    .recipient-search {
+        position: relative;
+        flex: 1;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        display: none;
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    [data-theme="dark"] .search-results {
+        background: #333;
+        border-color: #404040;
+    }
+    
+    .search-results.active {
+        display: block;
+    }
+    
+    .search-result-item {
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .search-result-item:hover {
+        background: #f0f0f0;
+    }
+    
+    [data-theme="dark"] .search-result-item:hover {
+        background: #404040;
+    }
+    
+    .selected-recipient {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: #e3f2fd;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+    
+    [data-theme="dark"] .selected-recipient {
+        background: #1a3a52;
+    }
+    
+    .selected-recipient.active {
+        display: flex;
+    }
+</style>
+
+<div class="message-container">
+    <!-- Sidebar -->
+    <div class="message-sidebar">
+        <button class="compose-button" onclick="openCompose()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Compose Message
+        </button>
+        
+        <div class="p-4 text-sm text-gray-600 dark:text-gray-400">
+            <div class="font-medium mb-2">Sent Messages</div>
+            <div class="text-xs">All messages sent to employees</div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="message-main">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Sent Messages</h2>
+        </div>
+        
+        <div class="message-list">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="message-item" onclick="viewMessage({{ message.message_id }})">
+                    <!-- Profile Photo -->
+                    <div class="flex-shrink-0">
+                        {% if message.is_broadcast %}
+                            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                                </svg>
+                            </div>
+                        {% elif message.recipient %}
+                            {% set recipient_employee = message.recipient.employees|first if message.recipient.employees else None %}
+                            {% if recipient_employee and recipient_employee.profile_image %}
+                                <img src="{{ url_for('static', filename='images/profiles/' + recipient_employee.profile_image) }}" 
+                                     alt="{{ message.recipient.username }}" 
+                                     class="w-12 h-12 rounded-full object-cover">
+                            {% else %}
+                                <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-lg">
+                                    {{ message.recipient.username[0].upper() if message.recipient else 'U' }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="w-12 h-12 rounded-full bg-gray-400 text-white flex items-center justify-center">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Message Content -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start mb-1">
+                            <div class="font-medium text-gray-900 dark:text-gray-100">
+                                {% if message.is_broadcast %}
+                                    <span class="flex items-center gap-2">
+                                        All Employees
+                                        <span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                                            Broadcast
+                                        </span>
+                                    </span>
+                                {% else %}
+                                    To: {{ message.recipient.username if message.recipient else 'Unknown' }}
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    {{ message.sent_at.strftime('%b %d, %H:%M') if message.sent_at else 'N/A' }}
+                                </span>
+                                {% if message.is_read %}
+                                    <span class="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                        Read
+                                    </span>
+                                {% else %}
+                                    <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">
+                                        Unread
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="font-medium text-gray-800 dark:text-gray-200 mb-1 truncate">
+                            {{ message.subject }}
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {{ message.body[:100] }}{% if message.body|length > 100 %}...{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                    <svg class="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <h5 class="text-lg font-medium mb-2">No messages sent yet</h5>
+                    <p class="text-sm">Click "Compose Message" to send your first message</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Compose Modal -->
+<div class="compose-modal" id="composeModal">
+    <div class="compose-box">
+        <div class="compose-header">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">New Message</h3>
+            <button onclick="closeCompose()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <form method="POST" action="{{ url_for('compose_message') }}" id="composeForm">
+            <div class="compose-body">
+                <div class="p-4">
+                    <div class="message-type-tabs">
+                        <div class="message-type-tab active" onclick="setMessageType('specific')" id="tabSpecific">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            Specific Employee
+                        </div>
+                        <div class="message-type-tab" onclick="setMessageType('broadcast')" id="tabBroadcast">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                            </svg>
+                            Broadcast to All
+                        </div>
+                    </div>
+                    <input type="hidden" name="message_type" id="messageType" value="specific">
+                </div>
+                
+                <div class="compose-field" id="recipientField">
+                    <label>To:</label>
+                    <div class="recipient-search">
+                        <input type="text" 
+                               id="recipientSearch" 
+                               placeholder="Search employee..."
+                               autocomplete="off"
+                               oninput="searchRecipients(this.value)">
+                        <input type="hidden" name="recipient_id" id="recipientId">
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                    <div class="selected-recipient" id="selectedRecipient">
+                        <img id="selectedPhoto" class="w-8 h-8 rounded-full" src="" alt="">
+                        <span id="selectedName"></span>
+                        <button type="button" onclick="clearRecipient()" class="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="compose-field">
+                    <label>Subject:</label>
+                    <input type="text" name="subject" placeholder="Subject" required>
+                </div>
+                
+                <div class="compose-editor">
+                    <textarea name="body" placeholder="Write your message here..." required></textarea>
+                </div>
+            </div>
+            
+            <div class="compose-footer">
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Send Message
+                </button>
+                <button type="button" onclick="closeCompose()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Message Detail Modal -->
+<div class="compose-modal" id="messageModal">
+    <div class="compose-box">
+        <div class="compose-header">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Message Details</h3>
+            <button onclick="closeMessageModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="p-6" id="messageContent"></div>
+    </div>
+</div>
+
+<script>
+    const employees = {{ employees_data|tojson if employees_data else '[]'|safe }};
+    
+    function openCompose() {
+        document.getElementById('composeModal').classList.add('active');
+        document.getElementById('recipientSearch').focus();
+    }
+    
+    function closeCompose() {
+        document.getElementById('composeModal').classList.remove('active');
+        document.getElementById('composeForm').reset();
+        clearRecipient();
+        setMessageType('specific');
+    }
+    
+    function setMessageType(type) {
+        document.getElementById('messageType').value = type;
+        document.getElementById('tabSpecific').classList.toggle('active', type === 'specific');
+        document.getElementById('tabBroadcast').classList.toggle('active', type === 'broadcast');
+        document.getElementById('recipientField').style.display = type === 'specific' ? 'flex' : 'none';
+    }
+    
+    function searchRecipients(query) {
+        const results = document.getElementById('searchResults');
+        
+        if (query.length < 2) {
+            results.classList.remove('active');
+            return;
+        }
+        
+        const filtered = employees.filter(emp => 
+            emp.name.toLowerCase().includes(query.toLowerCase()) ||
+            emp.email.toLowerCase().includes(query.toLowerCase()) ||
+            (emp.department_name && emp.department_name.toLowerCase().includes(query.toLowerCase()))
+        );
+        
+        if (filtered.length === 0) {
+            results.innerHTML = '<div class="p-4 text-gray-500 text-center">No employees found</div>';
+            results.classList.add('active');
+            return;
+        }
+        
+        results.innerHTML = filtered.map(emp => `
+            <div class="search-result-item" onclick="selectRecipient(${emp.user_id}, '${emp.name.replace(/'/g, "\\'")}', '${emp.email}', '${emp.profile_image || ''}')">
+                ${emp.profile_image ? 
+                    `<img src="/static/images/profiles/${emp.profile_image}" class="w-10 h-10 rounded-full object-cover" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${emp.name[0].toUpperCase()}</div>'">` :
+                    `<div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${emp.name[0].toUpperCase()}</div>`
+                }
+                <div class="flex-1 min-w-0">
+                    <div class="font-medium text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        results.classList.add('active');
+    }
+    
+    function selectRecipient(userId, name, email, photo) {
+        document.getElementById('recipientId').value = userId;
+        document.getElementById('recipientSearch').value = '';
+        document.getElementById('searchResults').classList.remove('active');
+        
+        const selectedDiv = document.getElementById('selectedRecipient');
+        const selectedPhoto = document.getElementById('selectedPhoto');
+        const selectedName = document.getElementById('selectedName');
+        
+        if (photo) {
+            selectedPhoto.src = `/static/images/profiles/${photo}`;
+            selectedPhoto.style.display = 'block';
+        } else {
+            selectedPhoto.style.display = 'none';
+        }
+        
+        selectedName.textContent = `${name} (${email})`;
+        selectedDiv.classList.add('active');
+    }
+    
+    function clearRecipient() {
+        document.getElementById('recipientId').value = '';
+        document.getElementById('selectedRecipient').classList.remove('active');
+    }
+    
+    function viewMessage(messageId) {
+        // For now, just show a simple modal - you can enhance this later
+        document.getElementById('messageModal').classList.add('active');
+        document.getElementById('messageContent').innerHTML = '<p class="text-gray-600 dark:text-gray-400">Loading message details...</p>';
+        
+        // You can add AJAX call here to load message details
+    }
+    
+    function closeMessageModal() {
+        document.getElementById('messageModal').classList.remove('active');
+    }
+    
+    // Close search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.recipient-search')) {
+            document.getElementById('searchResults').classList.remove('active');
+        }
+    });
+    
+    // Form validation
+    document.getElementById('composeForm').addEventListener('submit', function(e) {
+        const messageType = document.getElementById('messageType').value;
+        if (messageType === 'specific' && !document.getElementById('recipientId').value) {
+            e.preventDefault();
+            alert('Please select a recipient from the search results');
+            return false;
+        }
+    });
+    
+    // Close modals on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeCompose();
+            closeMessageModal();
+        }
+    });
+</script>
+{% endblock %}
