@@ -36,6 +36,9 @@ class Config:
         }
     else:
         # Local development - Use MS SQL Server
+        # Import pyodbc only for local development (not available on Railway)
+        import pyodbc
+        
         MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
         MSSQL_DATABASE = 'workflowx'
         MSSQL_USERNAME = 'workflowx_admin'
@@ -43,7 +46,6 @@ class Config:
         
         # Try ODBC Driver 17 first, fallback to Driver 18
         try:
-            import pyodbc
             drivers = [x for x in pyodbc.drivers() if 'SQL Server' in x]
             if any('17' in d for d in drivers):
                 MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
@@ -62,9 +64,9 @@ class Config:
         )
         
         SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_recycle": 300,
-        "pool_pre_ping": True,
-    }
+            "pool_recycle": 300,
+            "pool_pre_ping": True,
+        }
     
     # Application settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file upload
