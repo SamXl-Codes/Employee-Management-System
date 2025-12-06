@@ -27,23 +27,17 @@ class Config:
     # Database configuration - Support both MS SQL Server (local) and SQLite (Railway)
     # Week 7 Concept: Database configuration with flexible database support
     
-    # Check if running on Railway - Railway automatically sets RAILWAY_STATIC_URL
-    # Also check for common deployment environment variables as fallback
-    IS_RAILWAY = (
-        os.environ.get('RAILWAY_STATIC_URL') is not None or
-        os.environ.get('RAILWAY_ENVIRONMENT') is not None or
-        os.environ.get('RAILWAY_SERVICE_NAME') is not None or
-        os.environ.get('PORT') is not None  # Railway sets PORT
-    )
+    # Try to detect if pyodbc is available (local) or not (Railway/cloud)
+    try:
+        import pyodbc
+        HAS_PYODBC = True
+    except ImportError:
+        HAS_PYODBC = False
     
-    # Debug logging
-    print(f"[CONFIG DEBUG] IS_RAILWAY: {IS_RAILWAY}")
-    print(f"[CONFIG DEBUG] PORT: {os.environ.get('PORT')}")
-    print(f"[CONFIG DEBUG] RAILWAY_STATIC_URL: {os.environ.get('RAILWAY_STATIC_URL')}")
-    
-    if IS_RAILWAY:
-        # Railway deployment - Use SQLite (simple, no separate database needed)
-        # Store database in persistent storage
+    if not HAS_PYODBC:
+        # Cloud deployment (Railway, Render, etc.) - Use SQLite
+        # pyodbc not available, use SQLite instead
+        print("[CONFIG] Using SQLite database (Cloud deployment)")
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'workflowx.db')
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
         SQLALCHEMY_ENGINE_OPTIONS = {
@@ -51,8 +45,7 @@ class Config:
         }
     else:
         # Local development - Use MS SQL Server
-        # Import pyodbc only for local development (not available on Railway)
-        import pyodbc
+        print("[CONFIG] Using MS SQL Server database (Local development)")
         
         MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
         MSSQL_DATABASE = 'workflowx'
