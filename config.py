@@ -20,44 +20,48 @@ class Config:
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     
-    # Database configuration - MS SQL Server
-    # Week 7 Concept: Database configuration with MS SQL Server
+    # Database configuration - Support both MS SQL Server (local) and SQLite (Railway)
+    # Week 7 Concept: Database configuration with flexible database support
     
-    # MS SQL Server Settings
-    MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
-    MSSQL_DATABASE = 'workflowx'
-    MSSQL_USERNAME = 'workflowx_admin'
-    MSSQL_PASSWORD = 'WorkFlowDB@2025'
+    # Check if running on Railway (RAILWAY_ENVIRONMENT is set by Railway)
+    IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT') is not None
     
-    # Try ODBC Driver 17 first, fallback to Driver 18
-    try:
-        import pyodbc
-        drivers = [x for x in pyodbc.drivers() if 'SQL Server' in x]
-        if any('17' in d for d in drivers):
+    if IS_RAILWAY:
+        # Railway deployment - Use SQLite (simple, no separate database needed)
+        # Store database in persistent storage
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'workflowx.db')
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+        }
+    else:
+        # Local development - Use MS SQL Server
+        MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
+        MSSQL_DATABASE = 'workflowx'
+        MSSQL_USERNAME = 'workflowx_admin'
+        MSSQL_PASSWORD = 'WorkFlowDB@2025'
+        
+        # Try ODBC Driver 17 first, fallback to Driver 18
+        try:
+            import pyodbc
+            drivers = [x for x in pyodbc.drivers() if 'SQL Server' in x]
+            if any('17' in d for d in drivers):
+                MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
+            elif any('18' in d for d in drivers):
+                MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
+            else:
+                MSSQL_DRIVER = 'SQL Server'
+        except:
             MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
-        elif any('18' in d for d in drivers):
-            MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
-        else:
-            MSSQL_DRIVER = 'SQL Server'
-    except:
-        MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
-    
-    # Build MS SQL Server connection string
-    # Using Windows Authentication (more reliable for local development)
-    SQLALCHEMY_DATABASE_URI = (
-        f'mssql+pyodbc://{MSSQL_SERVER}/{MSSQL_DATABASE}?'
-        f'driver={MSSQL_DRIVER}&trusted_connection=yes'
-    )
-    
-    # Alternative: SQL Server Authentication (if needed)
-    # SQLALCHEMY_DATABASE_URI = (
-    #     f'mssql+pyodbc://{MSSQL_USERNAME}:{MSSQL_PASSWORD}@'
-    #     f'{MSSQL_SERVER}/{MSSQL_DATABASE}?'
-    #     f'driver={MSSQL_DRIVER}&TrustServerCertificate=yes'
-    # )
-    
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
+        
+        # Build MS SQL Server connection string
+        # Using Windows Authentication (more reliable for local development)
+        SQLALCHEMY_DATABASE_URI = (
+            f'mssql+pyodbc://{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+            f'driver={MSSQL_DRIVER}&trusted_connection=yes'
+        )
+        
+        SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_recycle": 300,
         "pool_pre_ping": True,
     }
