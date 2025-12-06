@@ -23,8 +23,14 @@ class Config:
     # Database configuration - Support both MS SQL Server (local) and SQLite (Railway)
     # Week 7 Concept: Database configuration with flexible database support
     
-    # Check if running on Railway (RAILWAY_ENVIRONMENT is set by Railway)
-    IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT') is not None
+    # Check if running on Railway - Railway automatically sets RAILWAY_STATIC_URL
+    # Also check for common deployment environment variables as fallback
+    IS_RAILWAY = (
+        os.environ.get('RAILWAY_STATIC_URL') is not None or
+        os.environ.get('RAILWAY_ENVIRONMENT') is not None or
+        os.environ.get('RAILWAY_SERVICE_NAME') is not None or
+        os.environ.get('PORT') is not None  # Railway sets PORT
+    )
     
     if IS_RAILWAY:
         # Railway deployment - Use SQLite (simple, no separate database needed)
