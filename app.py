@@ -29,51 +29,18 @@ app = Flask(__name__)
 # Using environment variable for security - never hardcode secrets
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production-ca2-2024")
 
+# Load configuration from config.py (handles both local and cloud)
+from config import Config
+app.config.from_object(Config)
+
 # ProxyFix middleware needed for proper URL generation with HTTPS
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Preferred URL scheme for external URLs
 app.config['PREFERRED_URL_SCHEME'] = 'http'
 
-# Configure MS SQL Server database connection
-# Week 7 Concept: Database configuration and connection
+# Get base directory
 basedir = os.path.abspath(os.path.dirname(__file__))
-
-# MS SQL Server Settings
-MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
-MSSQL_DATABASE = 'workflowx'
-MSSQL_USERNAME = 'workflowx_admin'
-MSSQL_PASSWORD = 'WorkFlowDB@2025'
-
-# Detect available ODBC driver
-try:
-    import pyodbc
-    drivers = [x for x in pyodbc.drivers() if 'SQL Server' in x]
-    if any('17' in d for d in drivers):
-        MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
-    elif any('18' in d for d in drivers):
-        MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
-    else:
-        MSSQL_DRIVER = 'SQL Server'
-except:
-    MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
-
-# Build MS SQL Server connection string using SQL Server Authentication
-from urllib.parse import quote_plus
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    f'mssql+pyodbc://{MSSQL_USERNAME}:{quote_plus(MSSQL_PASSWORD)}@{MSSQL_SERVER}/{MSSQL_DATABASE}?'
-    f'driver={MSSQL_DRIVER}&timeout=5'
-)
-
-# Database engine options
-# Week 7 Concept: Database optimization settings
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,  # Recycle connections after 5 minutes
-    "pool_pre_ping": True,  # Verify connections before using them
-}
-
-# Disable modification tracking to save resources
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # File Upload Configuration
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'images', 'profiles')
