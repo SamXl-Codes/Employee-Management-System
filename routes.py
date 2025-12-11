@@ -52,6 +52,27 @@ def get_local_ip():
     except Exception:
         return "127.0.0.1"  # Fallback to localhost if detection fails
 
+
+def get_base_url():
+    """Get the base URL for the application, handling both local and deployed environments."""
+    # Check if we're in a deployed environment (Railway, Render, etc.)
+    # These environments don't have pyodbc, so we use that as a marker
+    try:
+        import pyodbc
+        # Local development - use local IP with port 8080
+        return f"http://{get_local_ip()}:8080"
+    except ImportError:
+        # Deployed environment - use the request's host
+        # Railway and other platforms handle HTTPS and domains
+        from flask import request
+        if request:
+            # Use the request host which will be the Railway domain
+            scheme = request.scheme  # http or https
+            host = request.host  # includes port if non-standard
+            return f"{scheme}://{host}"
+        # Fallback (shouldn't happen in normal operation)
+        return "http://localhost:8080"
+
 def get_or_create_qr_token(date_str):
     """Get existing QR token for date or create new one. Auto-cleans old tokens."""
     # Clean up expired tokens (older than today)
@@ -2363,10 +2384,11 @@ def admin_qr_checkin():
     token = get_or_create_qr_token(today)
     print(f"[QR PAGE] Using token for {today}")
     
-    # Create check-in URL with network IP (not localhost)
-    # Force use of network IP so it works on mobile devices
-    network_ip = f"{get_local_ip()}:8080"
-    checkin_url = f"http://{network_ip}/checkin/{token}?date={today}"
+    # Create check-in URL using the appropriate base URL for the environment
+    # This works for both local development and Railway deployment
+    base_url = get_base_url()
+    checkin_url = f"{base_url}/checkin/{token}?date={today}"
+    print(f"[QR PAGE] Generated QR URL: {checkin_url}")
     
     # Generate QR code
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
