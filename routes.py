@@ -2592,69 +2592,72 @@ def submit_qr_checkin():
 #         flash('This feature is only available for employees', 'danger')
 #         return redirect(url_for('dashboard'))
 #     
-#     return render_template('manual_checkin.html')
-
-
-# REMOVED: Manual check-in submit route removed for security reasons
-# Employees must physically be at office to scan QR code
-# @app.route('/employee/manual-checkin/submit', methods=['POST'])
-# @login_required
-# def submit_manual_checkin():
-#     """Process manual check-in (similar to QR but without token verification)."""
-#     # This feature was removed because employees could check in from anywhere
-#     # without actually being present in the office
-#     pass
-
-
-@app.route('/employee/checkout', methods=['POST'])
-@login_required
-def employee_checkout():
-    """Process employee check-out."""
-    if session.get('role') != 'employee':
-        flash('This feature is only available for employees', 'danger')
-        return redirect(url_for('dashboard'))
+#    oday = date.today()
+    
+    # Get employee
+    user = repo.get_user_by_id(session['user_id'])
+    emp = Employee.query.filter_by(email=user.username).first()
+    
+    if not emp:
+        emp = Employee.query.filter(
+            (Employee.email == user.username + '@company.com') |
+            (Employee.email == user.username + '@workflowx.com')
+        ).first()
+    
+    if not emp:
+        flash('Employee profile not found', 'danger')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Find today's attendance record
+    attendance = Attendance.query.filter_by(
+        employee_id=emp.employee_id,
+        date=today
+    ).first()
+    
+    if not attendance:
+        flash('No check-in record found for today. Please check in first.', 'warning')
+        return redirect(url_for('employee_dashboard'))
+    
+    if attendance.check_out_time:
+        flash(f'You have already checked out today at {attendance.check_out_time.strftime("%I:%M %p")}', 'info')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Record check-out time
+    now = datetime.now()
+    attendance.check_out_time = now
+    
+    # Calculate hours worked
+    hours_worked = attendance.calculate_hours_worked()
+    
+    # Update notes to remove QR code text and add simple summary
+    attendance.notes = f'Checked in: {attendance.check_in_time.strftime("%I:%M %p")} | Checked out: {now.strftime("%I:%M %p")} | Hours: {hours_worked}h'
     
     try:
-        today = date.today()
-        
-        # Get employee
-        user = repo.get_user_by_id(session['user_id'])
-        emp = Employee.query.filter_by(email=user.username).first()
-        
-        if not emp:
-            emp = Employee.query.filter(
-                (Employee.email == user.username + '@company.com') |
-                (Employee.email == user.username + '@workflowx.com')
-            ).first()
-        
-        if not emp:
-            flash('Employee profile not found', 'danger')
-            return redirect(url_for('employee_dashboard'))
-        
-        # Find today's attendance record
-        attendance = Attendance.query.filter_by(
-            employee_id=emp.employee_id,
-            date=today
-        ).first()
-        
-        if not attendance:
-            flash('No check-in record found for today. Please check in first.', 'warning')
-            return redirect(url_for('employee_dashboard'))
-        
-        if attendance.check_out_time:
-            flash(f'You have already checked out today at {attendance.check_out_time.strftime("%I:%M %p")}', 'info')
-            return redirect(url_for('employee_dashboard'))
-        
-        # Record check-out time
-        now = datetime.now()
-        attendance.check_out_time = now
-        
-        # Calculate hours worked
-        hours_worked = attendance.calculate_hours_worked()
-        
-        # Update notes to remove QR code text and add simple summary
-        attendance.notes = f'Checked in: {attendance.check_in_time.strftime("%I:%M %p")} | Checked out: {now.strftime("%I:%M %p")} | Hours: {hours_worked}h'
-        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error processing check-out: {str(e)}")
+        flash('An error occurred during check-out. Please contact HR.', 'danger')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Log the action (after successful commit)
+    try:
+        log_audit('UPDATE', 'Attendance', attendance.attendance_id, 
+                 f'Employee {emp.first_name} {emp.last_name} checked out - {hours_worked}h worked')
+    except Exception as e:
+        app.logger.error(f"Error logging checkout audit: {str(e)}")
+        # Don't show error to user, checkout was successful
+    
+    flash(f'Check-out successful at {now.strftime("%I:%M %p")}! Hours worked: {hours_worked}h', 'success')
+    
+    # If coming from QR flow, redirect back to QR page to show completion
+    if request.form.get('from_qr') == 'true':
+        token = request.form.get('token')
+        checkin_date = request.form.get('date')
+        if token and checkin_date:
+            return redirect(f'/checkin/{token}?date={checkin_date}')
+    
+    
         db.session.commit()
         
         # Log the action
