@@ -2674,12 +2674,6 @@ def submit_qr_checkin():
                 return redirect(f'/checkin/{token}?date={checkin_date}')
         
         return redirect(url_for('employee_dashboard'))
-        
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error processing check-out: {str(e)}")
-        flash('An error occurred during check-out. Please contact HR.', 'danger')
-        return redirect(url_for('employee_dashboard'))
 
 
 # ==================== PAYROLL MANAGEMENT ROUTES ====================
