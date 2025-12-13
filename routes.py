@@ -3546,25 +3546,31 @@ def admin_messages():
             rows = result.fetchall()
             
             # Manually create Message-like objects from raw SQL results
-            messages = []
-            for row in rows:
-                class MessageProxy:
-                    def __init__(self, row):
-                        self.message_id = row[0]
-                        self.sender_id = row[1]
-                        self.recipient_id = row[2]
-                        self.subject = row[3]
-                        self.body = row[4]
-                        self.is_broadcast = row[5]
-                        self.is_read = row[6]
-                        self.sent_at = row[7]
-                        self.read_at = row[8]
-                        # Add relationships
-                        self.sender = User.query.get(self.sender_id) if self.sender_id else None
-                        self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
-                
-                messages.append(MessageProxy(row))
+            # Define proxy class once
+            class MessageProxy:
+                def __init__(self, row_data):
+                    self.message_id = row_data[0]
+                    self.sender_id = row_data[1]
+                    self.recipient_id = row_data[2]
+                    self.subject = row_data[3]
+                    self.body = row_data[4]
+                    self.is_broadcast = bool(row_data[5])
+                    self.is_read = bool(row_data[6])
+                    self.sent_at = row_data[7]
+                    self.read_at = row_data[8]
+                    # Load relationships
+                    self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                    self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                    # Add employees attribute to User objects if they don't have it
+                    # This is needed by templates that check user.employees
+                    if self.sender and not hasattr(self.sender, 'employees'):
+                        self.sender.employees = []
+                    if self.recipient and not hasattr(self.recipient, 'employees'):
+                        self.recipient.employees = []
+            
+            messages = [MessageProxy(row) for row in rows]
             drafts_count = 0
+            app.logger.info(f"Loaded {len(messages)} admin messages for tab={tab} using old schema")
             
         else:
             # New schema with draft/deleted columns
@@ -3717,25 +3723,30 @@ def employee_messages():
             rows = result.fetchall()
             
             # Manually create Message-like objects from raw SQL results
-            messages = []
-            for row in rows:
-                # Create a simple object with the needed attributes
-                class MessageProxy:
-                    def __init__(self, row):
-                        self.message_id = row[0]
-                        self.sender_id = row[1]
-                        self.recipient_id = row[2]
-                        self.subject = row[3]
-                        self.body = row[4]
-                        self.is_broadcast = row[5]
-                        self.is_read = row[6]
-                        self.sent_at = row[7]
-                        self.read_at = row[8]
-                        # Add relationships
-                        self.sender = User.query.get(self.sender_id) if self.sender_id else None
-                        self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
-                
-                messages.append(MessageProxy(row))
+            # Define proxy class once
+            class MessageProxy:
+                def __init__(self, row_data):
+                    self.message_id = row_data[0]
+                    self.sender_id = row_data[1]
+                    self.recipient_id = row_data[2]
+                    self.subject = row_data[3]
+                    self.body = row_data[4]
+                    self.is_broadcast = bool(row_data[5])
+                    self.is_read = bool(row_data[6])
+                    self.sent_at = row_data[7]
+                    self.read_at = row_data[8]
+                    # Load relationships
+                    self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                    self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                    # Add employees attribute to User objects if they don't have it
+                    # This is needed by templates that check user.employees
+                    if self.sender and not hasattr(self.sender, 'employees'):
+                        self.sender.employees = []
+                    if self.recipient and not hasattr(self.recipient, 'employees'):
+                        self.recipient.employees = []
+            
+            messages = [MessageProxy(row) for row in rows]
+            app.logger.info(f"Loaded {len(messages)} messages for tab={tab} using old schema")
             
             unread_count = db.session.execute(
                 text("SELECT COUNT(*) FROM messages WHERE recipient_id = :user_id AND is_read = 0"),
