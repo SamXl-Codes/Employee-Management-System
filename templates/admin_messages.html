@@ -461,8 +461,9 @@
         max-height: 300px;
         overflow-y: auto;
         display: none;
-        z-index: 10;
+        z-index: 9999;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        pointer-events: auto;
     }
     
     [data-theme="dark"] .recipient-search-results {
@@ -481,6 +482,9 @@
         gap: 12px;
         cursor: pointer;
         transition: background 0.2s;
+        pointer-events: auto;
+        position: relative;
+        z-index: 1;
     }
     
     .recipient-search-item:hover {
@@ -901,22 +905,9 @@
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'recipient-search-item';
-            itemDiv.style.cssText = 'cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 12px;';
+            itemDiv.style.cssText = 'cursor: pointer !important; padding: 12px 16px; display: flex; align-items: center; gap: 12px; pointer-events: auto !important;';
             
-            // Store employee data in closure
-            const empData = {
-                user_id: emp.user_id,
-                name: emp.name,
-                email: emp.email,
-                profile_image: emp.profile_image || '',
-                department_name: emp.department_name || ''
-            };
-            
-            // Direct onclick handler with closure data
-            itemDiv.onclick = function() {
-                selectRecipient(empData);
-            };
-            
+            // Build HTML first
             if (photoUrl) {
                 itemDiv.innerHTML = `
                     <img src="${photoUrl}" class="recipient-search-avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div style=&quot;width:40px;height:40px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;border:2px solid #e5e7eb;&quot;>${firstInitial}</div>'">
@@ -935,7 +926,21 @@
                 `;
             }
             
+            // Append to DOM first
             results.appendChild(itemDiv);
+            
+            // THEN set onclick handler (after it's in the DOM)
+            itemDiv.onclick = function(e) {
+                e.stopPropagation();
+                console.log('Admin item clicked:', emp.name);
+                selectRecipient({
+                    user_id: emp.user_id,
+                    name: emp.name,
+                    email: emp.email,
+                    profile_image: emp.profile_image || '',
+                    department_name: emp.department_name || ''
+                });
+            };
         });
         
         results.classList.add('active');

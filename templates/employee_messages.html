@@ -631,9 +631,22 @@
                 console.log('Found recipient:', recipient);
                 if (recipient) {
                     const selectedRecipient = document.getElementById('selectedRecipient');
+                    const selectedPhoto = document.getElementById('selectedPhoto');
+                    const selectedName = document.getElementById('selectedName');
+                    
+                    // Set photo
+                    if (recipient.profile_image) {
+                        selectedPhoto.outerHTML = `<img id="selectedPhoto" class="w-8 h-8 rounded-full object-cover" src="/static/images/profiles/${recipient.profile_image}" onerror="this.outerHTML='<div id=\\'selectedPhoto\\' class=\\'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${recipient.name[0].toUpperCase()}</div>'">`;
+                    } else {
+                        selectedPhoto.outerHTML = `<div id="selectedPhoto" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${recipient.name[0].toUpperCase()}</div>`;
+                    }
+                    
+                    // Set name
+                    selectedName.textContent = `${recipient.name} (${recipient.email})`;
+                    
+                    // Show selected recipient, hide search
                     selectedRecipient.style.display = 'flex';
-                    document.getElementById('selectedName').textContent = `${recipient.name} (${recipient.email})`;
-                    // Hide search box when recipient is selected
+                    selectedRecipient.classList.add('active');
                     document.querySelector('.recipient-search').style.display = 'none';
                 }
             } else {
