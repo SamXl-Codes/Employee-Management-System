@@ -3892,6 +3892,8 @@ def employee_messages():
                 
             else:  # inbox
                 query = Message.query.filter_by(recipient_id=session['user_id'])
+                if has_draft:
+                    query = query.filter_by(is_draft=False)
                 if has_deleted:
                     query = query.filter(Message.deleted_at.is_(None))
                 messages = query.order_by(Message.sent_at.desc()).all()
