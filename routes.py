@@ -3609,17 +3609,18 @@ def admin_messages():
                 for row in rows:
                     is_broadcast = bool(row[5])
                     if is_broadcast:
-                        # Create unique key for broadcast: subject + sent_at
-                        broadcast_key = (row[3], row[7])  # (subject, sent_at)
+                        # Create unique key for broadcast: subject only (since all sent at same time)
+                        # Timestamp might vary by milliseconds so just use subject + sender
+                        broadcast_key = (row[3], row[1])  # (subject, sender_id)
                         if broadcast_key not in seen_broadcasts:
                             seen_broadcasts.add(broadcast_key)
                             unique_rows.append(row)
-                            app.logger.info(f"Added first instance of broadcast: {broadcast_key}")
+                            app.logger.info(f"Added first instance of broadcast: subject='{row[3]}', sender={row[1]}")
                         else:
-                            app.logger.info(f"Skipped duplicate broadcast: {broadcast_key}")
+                            app.logger.info(f"Skipped duplicate broadcast: subject='{row[3]}', sender={row[1]}")
                     else:
                         unique_rows.append(row)
-                app.logger.info(f"After deduplication: {len(unique_rows)} unique messages")
+                app.logger.info(f"After deduplication: {len(unique_rows)} unique messages (started with {len(rows)})")
                 rows = unique_rows
             
             # Manually create Message-like objects from raw SQL results
@@ -3688,16 +3689,17 @@ def admin_messages():
                 messages = []
                 for msg in all_messages:
                     if msg.is_broadcast:
-                        broadcast_key = (msg.subject, msg.sent_at.isoformat() if msg.sent_at else None)
+                        # Use subject + sender only (timestamps may vary by milliseconds)
+                        broadcast_key = (msg.subject, msg.sender_id)
                         if broadcast_key not in seen_broadcasts:
                             seen_broadcasts.add(broadcast_key)
                             messages.append(msg)
-                            app.logger.info(f"Added first instance of broadcast: {broadcast_key}")
+                            app.logger.info(f"Added first instance of broadcast: subject='{msg.subject}', sender={msg.sender_id}")
                         else:
-                            app.logger.info(f"Skipped duplicate broadcast: {broadcast_key}")
+                            app.logger.info(f"Skipped duplicate broadcast: subject='{msg.subject}', sender={msg.sender_id}")
                     else:
                         messages.append(msg)
-                app.logger.info(f"After deduplication: {len(messages)} unique messages")
+                app.logger.info(f"After deduplication: {len(messages)} unique messages (started with {len(all_messages)})")
             
             # Count drafts
             drafts_count = 0
@@ -3927,7 +3929,7 @@ def employee_messages():
             # Count unread with broadcast deduplication
             unread_rows = db.session.execute(
                 text("""
-                    SELECT message_id, is_broadcast, subject, sent_at 
+                    SELECT message_id, is_broadcast, subject, sender_id 
                     FROM messages 
                     WHERE recipient_id = :user_id AND is_read = 0
                 """),
@@ -3939,7 +3941,7 @@ def employee_messages():
             for row in unread_rows:
                 is_broadcast = bool(row[1])
                 if is_broadcast:
-                    broadcast_key = (row[2], row[3])  # (subject, sent_at)
+                    broadcast_key = (row[2], row[3])  # (subject, sender_id)
                     if broadcast_key not in seen_broadcasts:
                         seen_broadcasts.add(broadcast_key)
                         unread_count += 1
@@ -3985,7 +3987,7 @@ def employee_messages():
             unread_count = 0
             for msg in all_unread:
                 if msg.is_broadcast:
-                    broadcast_key = (msg.subject, msg.sent_at.isoformat())
+                    broadcast_key = (msg.subject, msg.sender_id)
                     if broadcast_key not in seen_broadcasts:
                         seen_broadcasts.add(broadcast_key)
                         unread_count += 1

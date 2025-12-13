@@ -692,11 +692,6 @@
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'search-result-item';
-            itemDiv.dataset.userId = emp.user_id;
-            itemDiv.dataset.name = emp.name;
-            itemDiv.dataset.email = emp.email;
-            itemDiv.dataset.photo = photoPath;
-            itemDiv.onclick = function() { selectRecipientFromElement(this); };
             itemDiv.style.cursor = 'pointer';
             
             if (emp.profile_image) {
@@ -716,6 +711,13 @@
                     </div>
                 `;
             }
+            
+            // Set data and handlers AFTER innerHTML
+            itemDiv.dataset.userId = emp.user_id;
+            itemDiv.dataset.name = emp.name;
+            itemDiv.dataset.email = emp.email;
+            itemDiv.dataset.photo = photoPath;
+            itemDiv.onclick = function() { selectRecipientFromElement(this); };
             
             results.appendChild(itemDiv);
         });
