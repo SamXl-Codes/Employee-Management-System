@@ -897,7 +897,8 @@
             return;
         }
         
-        results.innerHTML = filtered.map(emp => {
+        results.innerHTML = '';
+        filtered.forEach(emp => {
             const photoUrl = emp.profile_image ? `/static/images/profiles/${emp.profile_image}` : '';
             const firstInitial = emp.name.charAt(0).toUpperCase();
             
@@ -909,6 +910,7 @@
             itemDiv.dataset.photo = emp.profile_image || '';
             itemDiv.dataset.dept = emp.department_name || '';
             itemDiv.onclick = function() { selectRecipientFromData(this); };
+            itemDiv.style.cursor = 'pointer';
             
             if (photoUrl) {
                 itemDiv.innerHTML = `
@@ -928,8 +930,8 @@
                 `;
             }
             
-            return itemDiv.outerHTML;
-        }).join('');
+            results.appendChild(itemDiv);
+        });
         
         results.classList.add('active');
     }

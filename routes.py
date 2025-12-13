@@ -3603,6 +3603,7 @@ def admin_messages():
             
             # Deduplicate broadcast messages - only show one per broadcast
             if tab != 'drafts':
+                app.logger.info(f"Admin messages: Deduplicating {len(rows)} messages for tab={tab}")
                 seen_broadcasts = set()
                 unique_rows = []
                 for row in rows:
@@ -3613,8 +3614,12 @@ def admin_messages():
                         if broadcast_key not in seen_broadcasts:
                             seen_broadcasts.add(broadcast_key)
                             unique_rows.append(row)
+                            app.logger.info(f"Added first instance of broadcast: {broadcast_key}")
+                        else:
+                            app.logger.info(f"Skipped duplicate broadcast: {broadcast_key}")
                     else:
                         unique_rows.append(row)
+                app.logger.info(f"After deduplication: {len(unique_rows)} unique messages")
                 rows = unique_rows
             
             # Manually create Message-like objects from raw SQL results
@@ -3678,6 +3683,7 @@ def admin_messages():
                 all_messages = query.order_by(Message.sent_at.desc()).all()
                 
                 # Deduplicate broadcast messages
+                app.logger.info(f"Admin messages (new schema): Deduplicating {len(all_messages)} messages for tab={tab}")
                 seen_broadcasts = set()
                 messages = []
                 for msg in all_messages:
@@ -3686,8 +3692,12 @@ def admin_messages():
                         if broadcast_key not in seen_broadcasts:
                             seen_broadcasts.add(broadcast_key)
                             messages.append(msg)
+                            app.logger.info(f"Added first instance of broadcast: {broadcast_key}")
+                        else:
+                            app.logger.info(f"Skipped duplicate broadcast: {broadcast_key}")
                     else:
                         messages.append(msg)
+                app.logger.info(f"After deduplication: {len(messages)} unique messages")
             
             # Count drafts
             drafts_count = 0
@@ -3914,10 +3924,28 @@ def employee_messages():
             messages = [MessageProxy(row) for row in rows]
             app.logger.info(f"Loaded {len(messages)} messages for tab={tab} using old schema")
             
-            unread_count = db.session.execute(
-                text("SELECT COUNT(*) FROM messages WHERE recipient_id = :user_id AND is_read = 0"),
+            # Count unread with broadcast deduplication
+            unread_rows = db.session.execute(
+                text("""
+                    SELECT message_id, is_broadcast, subject, sent_at 
+                    FROM messages 
+                    WHERE recipient_id = :user_id AND is_read = 0
+                """),
                 {'user_id': session['user_id']}
-            ).scalar()
+            ).fetchall()
+            
+            seen_broadcasts = set()
+            unread_count = 0
+            for row in unread_rows:
+                is_broadcast = bool(row[1])
+                if is_broadcast:
+                    broadcast_key = (row[2], row[3])  # (subject, sent_at)
+                    if broadcast_key not in seen_broadcasts:
+                        seen_broadcasts.add(broadcast_key)
+                        unread_count += 1
+                else:
+                    unread_count += 1
+            
             drafts_count = db.session.execute(
                 text("SELECT COUNT(*) FROM messages WHERE sender_id = :user_id AND subject LIKE '[DRAFT]%'"),
                 {'user_id': session['user_id']}
@@ -3947,11 +3975,22 @@ def employee_messages():
                     query = query.filter(Message.deleted_at.is_(None))
                 messages = query.order_by(Message.sent_at.desc()).all()
             
-            # Count unread messages
+            # Count unread messages with broadcast deduplication
             unread_query = Message.query.filter_by(recipient_id=session['user_id'], is_read=False)
             if has_deleted:
                 unread_query = unread_query.filter(Message.deleted_at.is_(None))
-            unread_count = unread_query.count()
+            
+            all_unread = unread_query.all()
+            seen_broadcasts = set()
+            unread_count = 0
+            for msg in all_unread:
+                if msg.is_broadcast:
+                    broadcast_key = (msg.subject, msg.sent_at.isoformat())
+                    if broadcast_key not in seen_broadcasts:
+                        seen_broadcasts.add(broadcast_key)
+                        unread_count += 1
+                else:
+                    unread_count += 1
             
             # Count drafts
             drafts_count = 0
