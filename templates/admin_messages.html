@@ -895,13 +895,27 @@
         }
         
         results.innerHTML = '';
-        filtered.forEach(emp => {
+        filtered.forEach((emp, idx) => {
             const photoUrl = emp.profile_image ? `/static/images/profiles/${emp.profile_image}` : '';
             const firstInitial = emp.name.charAt(0).toUpperCase();
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'recipient-search-item';
-            itemDiv.style.cursor = 'pointer';
+            itemDiv.style.cssText = 'cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 12px;';
+            
+            // Store employee data in closure
+            const empData = {
+                user_id: emp.user_id,
+                name: emp.name,
+                email: emp.email,
+                profile_image: emp.profile_image || '',
+                department_name: emp.department_name || ''
+            };
+            
+            // Direct onclick handler with closure data
+            itemDiv.onclick = function() {
+                selectRecipient(empData);
+            };
             
             if (photoUrl) {
                 itemDiv.innerHTML = `
@@ -920,21 +934,6 @@
                     </div>
                 `;
             }
-            
-            // Set data and handlers AFTER innerHTML
-            itemDiv.dataset.userId = emp.user_id;
-            itemDiv.dataset.name = emp.name;
-            itemDiv.dataset.email = emp.email;
-            itemDiv.dataset.photo = emp.profile_image || '';
-            itemDiv.dataset.dept = emp.department_name || '';
-            
-            // Use addEventListener instead of onclick to ensure it's not overwritten
-            itemDiv.addEventListener('click', function() {
-                console.log('Admin search item clicked:', emp.name);
-                selectRecipientFromData(this);
-            });
-            
-            console.log('Added item to results:', emp.name, 'onclick attached:', itemDiv.onclick !== null);
             
             results.appendChild(itemDiv);
         });

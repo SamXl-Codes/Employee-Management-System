@@ -686,13 +686,27 @@
         }
         
         results.innerHTML = '';
-        filtered.forEach(emp => {
+        filtered.forEach((emp, idx) => {
             const photoPath = emp.profile_image || '';
             const firstInitial = emp.name.charAt(0).toUpperCase();
             
+            // Create element with direct onclick
             const itemDiv = document.createElement('div');
             itemDiv.className = 'search-result-item';
-            itemDiv.style.cursor = 'pointer';
+            itemDiv.style.cssText = 'cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 12px;';
+            
+            // Store data for click handler
+            const empData = {
+                userId: emp.user_id,
+                name: emp.name,
+                email: emp.email,
+                photo: photoPath
+            };
+            
+            // Direct onclick handler
+            itemDiv.onclick = function() {
+                selectRecipient(empData.userId, empData.name, empData.email, empData.photo);
+            };
             
             if (emp.profile_image) {
                 itemDiv.innerHTML = `
@@ -712,20 +726,6 @@
                 `;
             }
             
-            // Set data and handlers AFTER innerHTML
-            itemDiv.dataset.userId = emp.user_id;
-            itemDiv.dataset.name = emp.name;
-            itemDiv.dataset.email = emp.email;
-            itemDiv.dataset.photo = photoPath;
-            
-            // Use addEventListener to ensure handler persists
-            itemDiv.addEventListener('click', function() {
-                console.log('Employee search item clicked:', emp.name);
-                selectRecipientFromElement(this);
-            });
-            
-            console.log('Added item:', emp.name, 'userId:', emp.user_id);
-            
             results.appendChild(itemDiv);
         });
         
@@ -741,51 +741,32 @@
     }
     
     function selectRecipient(userId, name, email, photo) {
-        console.log('selectRecipient called:', {userId, name, email, photo});
+        // Set the hidden recipient ID field
+        document.getElementById('recipient_id').value = userId;
         
-        const recipientField = document.getElementById('recipient_id');
-        console.log('recipient_id field exists:', !!recipientField);
-        if (recipientField) {
-            recipientField.value = userId;
-            console.log('Set recipient_id to:', userId);
-        }
-        
+        // Clear and hide search
         document.getElementById('recipientSearch').value = '';
         document.getElementById('searchResults').classList.remove('active');
+        document.querySelector('.recipient-search').style.display = 'none';
         
-        // Hide search input, show selected recipient
-        const searchDiv = document.querySelector('.recipient-search');
-        if (searchDiv) searchDiv.style.display = 'none';
-        
+        // Show selected recipient display
         const selectedDiv = document.getElementById('selectedRecipient');
         const selectedPhoto = document.getElementById('selectedPhoto');
         const selectedName = document.getElementById('selectedName');
         
-        console.log('Elements found:', {
-            selectedDiv: !!selectedDiv, 
-            selectedPhoto: !!selectedPhoto, 
-            selectedName: !!selectedName
-        });
-        
-        if (!selectedDiv || !selectedPhoto || !selectedName) {
-            console.error('Missing required elements!');
-            return;
-        }
-        
+        // Update photo
         if (photo) {
-            selectedPhoto.src = `/static/images/profiles/${photo}`;
-            selectedPhoto.style.display = 'block';
-            selectedPhoto.className = 'w-8 h-8 rounded-full object-cover';
-            selectedPhoto.onerror = function() {
-                this.outerHTML = `<div id="selectedPhoto" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${name[0].toUpperCase()}</div>`;
-            };
+            selectedPhoto.outerHTML = `<img id="selectedPhoto" class="w-8 h-8 rounded-full object-cover" src="/static/images/profiles/${photo}" onerror="this.outerHTML='<div id=\\'selectedPhoto\\' class=\\'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${name[0].toUpperCase()}</div>'">`;
         } else {
             selectedPhoto.outerHTML = `<div id="selectedPhoto" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${name[0].toUpperCase()}</div>`;
         }
         
-        selectedName.textContent = `${name} (${email})`;
+        // Update name
+        document.getElementById('selectedName').textContent = `${name} (${email})`;
+        
+        // Show the selected recipient container
+        selectedDiv.style.display = 'flex';
         selectedDiv.classList.add('active');
-        console.log('Recipient selection complete. selectedDiv has active class:', selectedDiv.classList.contains('active'));
     }
     
     function clearRecipient() {
