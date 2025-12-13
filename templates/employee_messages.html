@@ -394,9 +394,16 @@
         <div class="message-list">
             {% if messages %}
                 {% for message in messages %}
-                <div class="message-item {% if not message.is_read and current_tab == 'inbox' %}unread{% endif %} group relative">
+                <div class="message-item {% if not message.is_read and current_tab == 'inbox' %}unread{% endif %} group relative" 
+                     {% if current_tab == 'drafts' %}
+                     data-draft-id="{{ message.message_id }}"
+                     data-subject="{{ message.subject|replace('[DRAFT] ', '') }}"
+                     data-body="{{ message.body }}"
+                     data-recipient-id="{{ message.recipient_id if message.recipient_id else '' }}"
+                     data-is-broadcast="{{ message.is_broadcast }}"
+                     {% endif %}>
                     {% if current_tab == 'drafts' %}
-                    <div class="flex-1 cursor-pointer" onclick="editDraft({{ message.message_id }}, '{{ message.subject|replace('[DRAFT] ', '')|replace(\"'\", \"\\'\") }}', {{ message.body|tojson }}, {{ message.recipient_id if message.recipient_id else 'null' }}, {{ 'true' if message.is_broadcast else 'false' }})">
+                    <div class="flex-1 cursor-pointer" onclick="editDraftFromData(this.parentElement)">
                     {% else %}
                     <div class="flex-1 cursor-pointer" onclick="window.location.href='{{ url_for('view_message', message_id=message.message_id) }}'">
                     {% endif %}
@@ -589,6 +596,16 @@
 <script>
     const employees = {{ employees|tojson }};
     
+    function editDraftFromData(element) {
+        const draftId = element.dataset.draftId;
+        const subject = element.dataset.subject;
+        const body = element.dataset.body;
+        const recipientId = element.dataset.recipientId;
+        const isBroadcast = element.dataset.isBroadcast === 'True';
+        
+        editDraft(draftId, subject, body, recipientId, isBroadcast);
+    }
+    
     function editDraft(draftId, subject, body, recipientId, isBroadcast) {
         // Open compose modal
         document.getElementById('composeModal').classList.add('active');
@@ -611,7 +628,7 @@
             if (recipientId) {
                 document.getElementById('recipient_id').value = recipientId;
                 // Find and display recipient name
-                const recipient = employees.find(e => e.user_id === recipientId);
+                const recipient = employees.find(e => e.user_id == recipientId);
                 if (recipient) {
                     document.getElementById('selectedRecipient').innerHTML = `
                         <div class="selected-recipient-tag">
