@@ -25,7 +25,7 @@ db = SQLAlchemy(model_class=Base)
 app = Flask(__name__)
 
 # Set secret key for session management (required for Flask sessions)
-# Week 9 Concept: Security - Session management with secure secret key
+# Manage user sessions
 # Using environment variable for security - never hardcode secrets
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production-ca2-2024")
 
@@ -36,7 +36,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['PREFERRED_URL_SCHEME'] = 'http'
 
 # Configure MS SQL Server database connection
-# Week 7 Concept: Database configuration and connection
+# Database configuration
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # MS SQL Server Settings
@@ -66,7 +66,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = (
 )
 
 # Database engine options
-# Week 7 Concept: Database optimization settings
+# Database configuration
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,  # Recycle connections after 5 minutes
     "pool_pre_ping": True,  # Verify connections before using them

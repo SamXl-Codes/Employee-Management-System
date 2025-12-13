@@ -9,9 +9,7 @@ Tests all database repository functions including:
 - Leave request management
 - Transaction handling and error cases
 
-Week 7 Concept: Testing database operations
-Week 3 Concept: Testing exception handling
-Week 9 Concept: Testing data access layer
+
 """
 
 import unittest
@@ -199,7 +197,7 @@ class TestDashboardStats(unittest.TestCase):
         """
         Test dashboard statistics calculation.
         
-        Week 5 Concept: Dictionary operations
+        Work with dictionary data structures
         """
         with app.app_context():
             stats = repo.get_dashboard_stats()

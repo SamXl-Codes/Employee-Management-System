@@ -10,8 +10,8 @@ Usage:
     python run_tests.py repository   # Run only repository tests
     python run_tests.py integration  # Run only integration tests
 
-Week 3 Concept: Test automation and organization
-Week 9 Concept: Comprehensive testing strategy
+Test with unittest framework
+Comprehensive testing strategy
 """
 
 import sys

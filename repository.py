@@ -23,9 +23,7 @@ def create_user(username: str, password: str, role: str = 'employee') -> tuple:
     """
     Create a new user in the database.
     
-    Week 3 Concept: Exception handling with try/except/finally
-    Week 7 Concept: Database operations with transaction management
-    
+  
     Args:
         username: Unique username
         password: Plain text password (will be hashed by User model)
@@ -35,7 +33,7 @@ def create_user(username: str, password: str, role: str = 'employee') -> tuple:
         tuple: (success: bool, message: str, user: User or None)
     """
     try:
-        # Create new User instance (OOP Week 4-5)
+        # Create new User instance
         user = User(username=username, password=password, role=role)
         
         # Add to database session
@@ -47,7 +45,7 @@ def create_user(username: str, password: str, role: str = 'employee') -> tuple:
         return True, "User created successfully", user
         
     except IntegrityError:
-        # Rollback on error (Week 7: transaction management)
+        
         db.session.rollback()
         return False, "Username already exists", None
         
@@ -121,7 +119,7 @@ def get_all_departments() -> List[Department]:
     """
     Retrieve all departments.
     
-    Week 5 Concept: Lists to store query results
+    Lists to store query results
     
     Returns:
         List[Department]: List of all departments
@@ -199,7 +197,7 @@ def delete_department(department_id: int) -> tuple:
         if not department:
             return False, "Department not found"
         
-        # Check if department can be deleted (Week 2: if/else logic)
+        
         if not department.can_delete():
             return False, "Cannot delete department with assigned employees"
         
@@ -388,7 +386,7 @@ def get_all_employees(include_inactive: bool = False) -> List[Employee]:
     try:
         query = Employee.query
         
-        # Filter by status if not including inactive (Week 2: if/else)
+        
         if not include_inactive:
             query = query.filter_by(status='active')
         
@@ -488,7 +486,7 @@ def update_employee(employee_id: int, **kwargs) -> tuple:
         if not employee:
             return False, "Employee not found"
         
-        # Update fields (Week 5: dictionary operations)
+        
         for key, value in kwargs.items():
             if hasattr(employee, key):
                 setattr(employee, key, value)
@@ -759,7 +757,7 @@ def get_dashboard_stats() -> Dict:
     """
     Get statistics for the dashboard.
     
-    Week 5 Concept: Dictionary to store and return data
+    Work with dictionary data structures
     
     Returns:
         Dict: Dashboard statistics

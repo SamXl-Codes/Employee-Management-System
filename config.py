@@ -12,7 +12,7 @@ class Config:
     """Base configuration class with common settings."""
     
     # Security settings
-    # Week 9 Concept: Security best practices - environment variable usage
+    # Use environment variables for sensitive configuration to keep secrets out of source code
     SECRET_KEY = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production-ca2-2024")
     
     # File Upload Configuration
@@ -20,8 +20,8 @@ class Config:
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     
-    # Database configuration - MS SQL Server
-    # Week 7 Concept: Database configuration with MS SQL Server
+    # Database configuration for MS SQL Server
+    # Connection settings for local development database
     
     # MS SQL Server Settings
     MSSQL_SERVER = 'localhost\\SQLEXPRESS01'

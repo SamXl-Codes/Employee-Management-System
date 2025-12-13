@@ -2,10 +2,10 @@
 WorkFlowX - Database Models
 
 This module defines all database models using SQLAlchemy ORM.
-Demonstrates Object-Oriented Programming principles:
-- Encapsulation: Data and methods bundled together
-- Abstraction: Complex database operations hidden behind simple interfaces
-- Classes with __init__, __str__, __repr__, and custom methods
+Uses Object-Oriented Programming with classes that bundle data and methods together.
+Database operations are abstracted through clean interfaces, with custom methods
+for calculations and business logic. Each model includes initialization, string
+representation, and conversion methods for easy data handling.
 """
 
 from datetime import datetime

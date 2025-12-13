@@ -20,8 +20,8 @@ def create_sample_data():
     """
     Create sample data for the application.
     
-    Week 3 Concept: Exception handling with try/except
-    Week 7 Concept: Database transactions
+    Handle errors gracefully
+    Database configuration
     """
     try:
         print("🚀 Starting data initialization...")
@@ -32,7 +32,7 @@ def create_sample_data():
             db.drop_all()
             db.create_all()
             
-            # Create Users (Week 4-5: OOP - creating instances)
+            # Create Users
             print("👤 Creating users...")
             admin = User(username='admin', password='admin123', role='admin')
             
@@ -40,7 +40,7 @@ def create_sample_data():
             db.session.commit()
             print("✅ Created admin user")
             
-            # Create Departments (Week 2: Lists to store multiple items)
+            
             print("🏢 Creating departments...")
             departments = [
                 Department('Technology & Infrastructure', 'IT operations, software development, cloud infrastructure, and technical services'),
@@ -56,7 +56,7 @@ def create_sample_data():
             db.session.commit()
             print(f"✅ Created {len(departments)} departments")
             
-            # Create Roles (Week 2: for loops for iteration)
+            
             print("💼 Creating job roles...")
             roles = [
                 # Technology & Infrastructure Roles
@@ -89,7 +89,7 @@ def create_sample_data():
             db.session.commit()
             print(f"✅ Created {len(roles)} job roles")
             
-            # Create Employees (Week 4-5: OOP with complex objects)
+            # Create Employees
             # Company founded: December 2020 (5 years ago)
             # Department IDs: 1=Tech & Infrastructure, 2=HR, 3=Sales, 4=Marketing, 5=Finance
             # Role IDs: 1=Soft Eng, 2=Sr Soft Eng, 3=DevOps, 4=DBA, 5=Cloud Arch, 6=Cloud Eng, 7=Network Eng, 8=Security Eng, 9=SysAdmin, 10=IT Support, 11=Data Eng, 12=Systems Analyst, 13=PM, 14=CIO, 15=Prod Mgr, 16=HR Mgr, 17=Sales Exec, 18=Marketing Spec, 19=Financial Analyst
@@ -154,7 +154,7 @@ def create_sample_data():
             db.session.commit()
             print(f"✅ Created {len(employees)} employees")
             
-            # Create user accounts for all employees (Week 2: for loops)
+            
             print("🔐 Creating user accounts for employees...")
             default_password = 'WorkFlow@2025'  # Default password for all employees
             employee_users_created = 0
@@ -172,7 +172,7 @@ def create_sample_data():
             db.session.commit()
             print(f"✅ Created {employee_users_created} employee user accounts (default password: {default_password})")
             
-            # Create Attendance Records (Week 2: Loops and date calculations)
+            
             print("📅 Creating realistic attendance records based on hire dates...")
             import random
             random.seed(42)  # For reproducible "random" data
@@ -231,7 +231,7 @@ def create_sample_data():
             db.session.commit()
             print(f"✅ Created {attendance_count} realistic attendance records (workdays only)")
             
-            # Create Leave Requests (Week 5: Different data structures)
+            
             print("🏖️ Creating realistic leave requests based on employee tenure...")
             leave_requests = []
             leave_count = 0

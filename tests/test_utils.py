@@ -9,9 +9,7 @@ Tests all validation and helper functions in utils.py including:
 - Salary validation
 - Required field validation
 
-Week 3 Concept: Unit testing with unittest framework
-Week 5 Concept: Testing regex patterns and string operations
-Week 9 Concept: Security testing - input validation
+
 """
 
 import unittest
@@ -28,9 +26,7 @@ import utils
 class TestEmailValidation(unittest.TestCase):
     """
     Test email validation function.
-    
-    Week 5 Concept: Testing regex pattern matching
-    Week 9 Concept: Testing security - input validation
+    Ensures regex patterns correctly identify valid and invalid email formats.
     """
     
     def test_valid_emails(self):
@@ -43,7 +39,7 @@ class TestEmailValidation(unittest.TestCase):
             'info+newsletter@website.io'
         ]
         
-        # Week 2 Concept: for loops with assertions
+        # Test each valid email format
         for email in valid_emails:
             with self.subTest(email=email):
                 self.assertTrue(utils.validate_email(email), 
@@ -76,8 +72,7 @@ class TestEmailValidation(unittest.TestCase):
 class TestPhoneValidation(unittest.TestCase):
     """
     Test phone number validation.
-    
-    Week 5 Concept: Testing regex patterns
+    Verifies various international phone number formats are accepted.
     """
     
     def test_valid_phone_formats(self):
@@ -116,9 +111,7 @@ class TestPhoneValidation(unittest.TestCase):
 class TestStringSanitization(unittest.TestCase):
     """
     Test string sanitization for XSS prevention.
-    
-    Week 5 Concept: String manipulation methods
-    Week 9 Concept: Security - XSS prevention
+    Ensures dangerous HTML and script tags are properly removed from user input.
     """
     
     def test_sanitize_removes_dangerous_tags(self):
@@ -134,7 +127,7 @@ class TestStringSanitization(unittest.TestCase):
         for dangerous in dangerous_inputs:
             with self.subTest(input=dangerous):
                 sanitized = utils.sanitize_string(dangerous)
-                # Week 2 Concept: Assertions and boolean logic
+                # Verify dangerous patterns are removed
                 self.assertNotIn('<script', sanitized.lower())
                 self.assertNotIn('javascript:', sanitized.lower())
                 self.assertNotIn('onclick=', sanitized.lower())
@@ -161,9 +154,7 @@ class TestStringSanitization(unittest.TestCase):
 class TestDateValidation(unittest.TestCase):
     """
     Test date validation and parsing functions.
-    
-    Week 4 Concept: Working with dates and time
-    Week 3 Concept: Testing exception handling
+    Validates date ranges for leave requests and other time-based operations.
     """
     
     def test_validate_date_range_valid(self):
@@ -203,7 +194,7 @@ class TestDateValidation(unittest.TestCase):
         """
         Test parsing valid date strings.
         
-        Week 6 Concept: Data parsing and conversion
+        Parse and convert data
         """
         test_cases = [
             ('2024-01-15', date(2024, 1, 15)),
@@ -235,8 +226,7 @@ class TestDateValidation(unittest.TestCase):
     def test_calculate_date_difference(self):
         """
         Test date difference calculation.
-        
-        Week 4 Concept: Algorithms and calculations
+        Calculates inclusive days between two dates for leave requests.
         """
         start = date(2024, 1, 1)
         end = date(2024, 1, 5)
@@ -254,9 +244,7 @@ class TestDateValidation(unittest.TestCase):
 class TestSalaryValidation(unittest.TestCase):
     """
     Test salary validation and conversion.
-    
-    Week 2 Concept: Type conversion and validation
-    Week 3 Concept: Exception handling
+    Ensures salary inputs are valid numbers within reasonable ranges.
     """
     
     def test_validate_salary_valid(self):
@@ -316,7 +304,7 @@ class TestUsernameValidation(unittest.TestCase):
     """
     Test username validation.
     
-    Week 5 Concept: String validation with regex
+    Validate using regex patterns
     """
     
     def test_valid_usernames(self):
@@ -369,8 +357,8 @@ class TestRequiredFields(unittest.TestCase):
     """
     Test required field validation.
     
-    Week 5 Concept: Dictionary operations
-    Week 2 Concept: Control flow and validation
+    Work with dictionary data structures
+    Control flow and validation
     """
     
     def test_all_fields_present(self):
@@ -429,7 +417,7 @@ class TestCurrencyFormatting(unittest.TestCase):
     """
     Test currency formatting function.
     
-    Week 5 Concept: String formatting
+    String formatting
     """
     
     def test_format_currency_valid(self):
@@ -456,7 +444,7 @@ def run_utils_tests():
     """
     Run all utility function tests.
     
-    Week 3 Concept: Test runner function
+    Test with unittest framework
     """
     # Create test suite
     suite = unittest.TestSuite()

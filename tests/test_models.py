@@ -8,8 +8,7 @@ Tests all model classes including:
 - Attendance and LeaveRequest models
 - AuditLog model
 
-Week 3 Concept: Unit testing with unittest framework
-Week 9 Concept: OOP testing - testing classes and methods
+
 """
 
 import unittest
@@ -28,8 +27,8 @@ class TestUserModel(unittest.TestCase):
     """
     Test User model functionality.
     
-    Week 3 Concept: Test classes inheriting from unittest.TestCase
-    Week 9 Concept: Testing authentication and security features
+    Test with unittest framework
+    Test security features
     """
     
     @classmethod
@@ -55,8 +54,8 @@ class TestUserModel(unittest.TestCase):
         """
         Test creating a new user.
         
-        Week 3 Concept: Testing function behavior
-        Week 9 Concept: Testing OOP constructors
+        Test with unittest framework
+        Test object methods
         """
         with app.app_context():
             user = User(username='testuser', password='testpass123', role='employee')
@@ -72,7 +71,7 @@ class TestUserModel(unittest.TestCase):
         """
         Test password hashing functionality.
         
-        Week 9 Concept: Security testing - password hashing
+        Use secure password hashing
         """
         with app.app_context():
             user = User(username='testuser', password='mypassword', role='admin')
@@ -88,8 +87,8 @@ class TestUserModel(unittest.TestCase):
         """
         Test password checking works correctly.
         
-        Week 2 Concept: Boolean logic and assertions
-        Week 9 Concept: Authentication testing
+        Boolean logic and assertions
+        Authentication testing
         """
         with app.app_context():
             user = User(username='testuser', password='correctpassword', role='employee')
@@ -105,8 +104,8 @@ class TestUserModel(unittest.TestCase):
         """
         Test User to_dict() method for JSON serialization.
         
-        Week 5 Concept: Dictionary operations
-        Week 8 Concept: Data serialization for APIs
+        Work with dictionary data structures
+        Serialize data for API responses
         """
         with app.app_context():
             user = User(username='testuser', password='password', role='admin')
@@ -154,7 +153,7 @@ class TestDepartmentModel(unittest.TestCase):
         """
         Test get_employee_count() method.
         
-        Week 9 Concept: Testing OOP methods and business logic
+        Test object methods
         """
         with app.app_context():
             # Create department and role
@@ -187,8 +186,8 @@ class TestDepartmentModel(unittest.TestCase):
         """
         Test can_delete() business logic.
         
-        Week 2 Concept: Boolean logic
-        Week 9 Concept: Testing business rules
+        Boolean logic and assertions
+        Validate business rules
         """
         with app.app_context():
             dept = Department(name='Marketing', description='Marketing Team')
@@ -247,8 +246,8 @@ class TestEmployeeModel(unittest.TestCase):
         """
         Test get_attendance_percentage() calculation.
         
-        Week 4 Concept: Working with algorithms and calculations
-        Week 5 Concept: Data processing
+        Calculate values
+        Data processing
         """
         with app.app_context():
             # Create employee
@@ -290,7 +289,7 @@ class TestEmployeeModel(unittest.TestCase):
         """
         Test get_total_leave_days() calculation.
         
-        Week 4 Concept: Algorithms and date calculations
+        Calculate values
         """
         with app.app_context():
             # Create employee
@@ -334,7 +333,7 @@ class TestEmployeeModel(unittest.TestCase):
         """
         Test activate() and deactivate() methods.
         
-        Week 9 Concept: Testing OOP methods
+        Test object methods
         """
         with app.app_context():
             dept = Department(name='Operations', description='Operations Team')
@@ -426,7 +425,7 @@ class TestLeaveRequestModel(unittest.TestCase):
         """
         Test calculate_days() method.
         
-        Week 4 Concept: Date calculations and algorithms
+        Calculate values
         """
         with app.app_context():
             dept = Department(name='Design', description='Design Team')
@@ -465,7 +464,7 @@ class TestLeaveRequestModel(unittest.TestCase):
         """
         Test approve() and reject() methods.
         
-        Week 9 Concept: Testing state changes in OOP
+        Test object methods
         """
         with app.app_context():
             dept = Department(name='Legal', description='Legal Department')
@@ -528,7 +527,7 @@ def run_model_tests():
     """
     Run all model tests.
     
-    Week 3 Concept: Test runner function
+    Test with unittest framework
     """
     # Create test suite
     suite = unittest.TestSuite()

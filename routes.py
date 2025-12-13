@@ -4,12 +4,12 @@ WorkFlowX - Route Handlers (Controllers)
 This module contains all Flask route handlers following MVC pattern.
 This is the Controller layer that handles HTTP requests and responses.
 
-Demonstrates:
+Features:
 - Flask routing and request handling
 - Session management for authentication
 - Form data validation
-- CSV and JSON exports (Week 6: File handling)
-- REST API endpoint (Week 8: Networking)
+- CSV and JSON data exports
+- REST API endpoints for external integrations
 """
 
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, make_response
@@ -77,8 +77,8 @@ def send_email_notification(recipient_email, subject, leave_type, status, start_
     """
     Send email notification for leave request decisions.
     
-    Week 7 Concept: String formatting
-    Week 9 Concept: Security - Audit and notification logging
+    Database operations
+    Security - Audit and notification logging
     """
     try:
         # Mock email sending (in production, use Flask-Mail)
@@ -108,8 +108,8 @@ def log_audit(action, entity_type, entity_id=None, description=None):
     """
     Log an audit event for tracking critical operations.
     
-    Week 8 Concept: Functions for code reuse
-    Week 9 Concept: Security and compliance through logging
+    Functions for code reuse
+    Security and compliance through logging
     """
     try:
         log = AuditLog(
@@ -159,8 +159,8 @@ def login_required(f):
     """
     Decorator to require login for protected routes.
     
-    Week 3 Concept: Functions and decorators
-    Week 9 Concept: Secure coding - authentication
+    Functions and decorators
+    Authenticate users securely
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -175,8 +175,8 @@ def admin_required(f):
     """
     Decorator to require admin role for protected routes.
     
-    Week 2 Concept: Control flow with if/else
-    Week 9 Concept: Authorization
+    Control flow logic
+    Check user permissions
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -222,8 +222,8 @@ def login():
     """
     Handle user login.
     
-    Week 2 Concept: if/elif/else for request method handling
-    Week 9 Concept: Secure coding - password hashing
+    Handle different request methods
+    Secure coding - password hashing
     """
     print("LOGIN ROUTE CALLED")  # DEBUG
     
@@ -250,7 +250,7 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         
-        # Validate required fields (Week 5: validation)
+        
         if not username or not password:
             flash('Username and password are required', 'danger')
             return render_template('login.html')
@@ -258,9 +258,9 @@ def login():
         # Retrieve user from database
         user = repo.get_user_by_username(username)
         
-        # Verify credentials (Week 2: if/else logic)
+        
         if user and user.check_password(password):
-            # Set session variables (Week 9: session management)
+            
             session['user_id'] = user.user_id
             session['username'] = user.username
             session['role'] = user.role
@@ -287,7 +287,7 @@ def logout():
     """Handle user logout."""
     username = session.get('username', 'User')
     
-    # Clear session completely (Week 9: secure session management)
+    
     session.clear()
     
     # Create response with cache control headers to prevent back button issues
@@ -309,8 +309,8 @@ def dashboard():
     Display dashboard with statistics and recent activity.
     Redirect employees to their personalized dashboard.
     
-    Week 5 Concept: Dictionaries to pass data to templates
-    Week 2 Concept: if/else for role-based routing
+    Dictionaries to pass data to templates
+    if/else for role-based routing
     """
     # Redirect employees to their personalized dashboard
     if session.get('role') == 'employee':
@@ -339,13 +339,13 @@ def employees():
     Display all employees with search capability.
     ADMIN ONLY - Employees cannot view other employees' data.
     
-    Week 2 Concept: for loops to iterate over results
-    Week 5 Concept: Lists to store and display data
+    Iterate through collections
+    Lists to store and display data
     """
     search_term = request.args.get('search', '').strip()
     status_filter = request.args.get('status', 'active')  # 'active', 'inactive', or 'all'
     
-    # Search or get all employees (Week 2: if/else)
+    
     if search_term:
         employee_list = repo.search_employees(search_term)
         # Apply status filter to search results
@@ -374,12 +374,12 @@ def add_employee():
     """
     Add new employee with validation.
     
-    Week 3 Concept: Exception handling
-    Week 5 Concept: String methods and regex validation
-    Week 9 Concept: Input validation for security
+    Handle potential errors
+    String manipulation and formatting
+    Input validation for security
     """
     if request.method == 'POST':
-        # Get form data (Week 5: dictionary operations)
+        
         name = utils.sanitize_string(request.form.get('name', ''))
         email = request.form.get('email', '').strip().lower()
         phone = request.form.get('phone', '').strip()
@@ -398,7 +398,7 @@ def add_employee():
             flash(error_msg, 'danger')
             return redirect(url_for('add_employee'))
         
-        # Validate email format (Week 5: regex)
+        
         if not utils.validate_email(email):
             flash('Invalid email format', 'danger')
             return redirect(url_for('add_employee'))
@@ -408,7 +408,7 @@ def add_employee():
             flash('Invalid phone number format', 'danger')
             return redirect(url_for('add_employee'))
         
-        # Validate and convert salary (Week 3: exception handling)
+        
         is_valid, error_msg, salary = utils.validate_salary(salary_str)
         if not is_valid:
             flash(error_msg, 'danger')
@@ -431,7 +431,7 @@ def add_employee():
                 else:
                     flash('Warning: Profile image could not be uploaded. Using default.', 'warning')
         
-        # Create employee (Week 7: database operations)
+        
         success, message, employee = repo.create_employee(
             name=name,
             email=email,
@@ -729,7 +729,7 @@ def attendance():
     """
     Display attendance marking interface with search and filter.
     
-    Week 2 Concept: for loops to iterate over employees
+    Iterate through collections
     """
     # Get date from query params or use today
     date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
@@ -796,8 +796,8 @@ def mark_attendance():
     """
     Mark attendance for employees.
     
-    Week 2 Concept: for loops to process form data
-    Week 5 Concept: Dictionary and list operations
+    Iterate through collections
+    Work with dictionary data structures
     """
     date_str = request.form.get('date')
     attendance_date = utils.parse_date(date_str)
@@ -860,7 +860,7 @@ def add_leave_request():
             flash('Invalid date format', 'danger')
             return redirect(url_for('add_leave_request'))
         
-        # Validate date range (Week 3: custom validation function)
+        
         is_valid, error_msg = utils.validate_date_range(start_date, end_date)
         if not is_valid:
             flash(error_msg, 'danger')
@@ -944,8 +944,8 @@ def reports():
     """
     Display advanced reports page with filters.
     
-    Week 5 Concept: Dictionary for complex data structures
-    Week 2 Concept: if/else for conditional rendering
+    Work with dictionary data structures
+    if/else for conditional rendering
     """
     # Get filter parameters
     report_type = request.args.get('type', 'overview')
@@ -1130,8 +1130,8 @@ def generate_chart_data(report_type, report_data):
     """
     Generate chart data for visualizations.
     
-    Week 5 Concept: List comprehension and dictionary construction for data transformation
-    Week 3 Concept: Function modularity for chart data generation
+    List comprehension and dictionary construction for data transformation
+    Function modularity for chart data generation
     """
     if not report_data:
         return None
@@ -1194,20 +1194,20 @@ def export_employees_csv():
     """
     Export employees to CSV file.
     
-    Week 6 Concept: CSV file handling with csv.writer
-    Week 6 Concept: Using 'with' context manager (although in-memory here)
+    Export data to CSV format
+    Using 'with' context manager (although in-memory here)
     """
     # Get all employees
     employees = repo.get_all_employees(include_inactive=True)
     
-    # Create CSV in memory (Week 6: File handling)
+    
     output = io.StringIO()
     writer = csv.writer(output)
     
     # Write header row
     writer.writerow(['ID', 'Name', 'Email', 'Phone', 'Department', 'Role', 'Salary', 'Date Joined', 'Status'])
     
-    # Write data rows (Week 2: for loop iteration)
+    
     for emp in employees:
         writer.writerow([
             emp.employee_id,
@@ -1236,13 +1236,13 @@ def export_employees_json():
     """
     Export employees to JSON file.
     
-    Week 6 Concept: JSON file handling
-    Week 5 Concept: Dictionary operations with to_dict()
+    Export data as JSON
+    Work with dictionary data structures
     """
     # Get all employees
     employees = repo.get_all_employees(include_inactive=True)
     
-    # Convert to dictionary list (Week 5: list comprehension, dictionaries)
+    
     employee_data = [emp.to_dict() for emp in employees]
     
     # Create JSON response
@@ -1550,15 +1550,15 @@ def api_employees():
     """
     REST API endpoint to get employees as JSON.
     
-    Week 8 Concept: Networking/REST API
+    REST API endpoint
     Returns JSON response instead of HTML
     """
     employees = repo.get_all_employees()
     
-    # Convert to dictionary list (Week 5: list comprehension)
+    
     employee_data = [emp.to_dict() for emp in employees]
     
-    # Return JSON response (Week 8: REST API)
+    
     return jsonify({
         'success': True,
         'count': len(employee_data),
@@ -1586,9 +1586,9 @@ def import_employees():
     """
     Bulk import employees from CSV file.
     
-    Week 6 Concept: File handling with CSV parsing
-    Week 3 Concept: Exception handling during import
-    Week 5 Concept: Lists and dictionaries for batch processing
+    Export data to CSV format
+    Handle potential errors
+    Lists and dictionaries for batch processing
     """
     import_results = None
     
@@ -1611,7 +1611,7 @@ def import_employees():
             return redirect(url_for('import_employees'))
         
         try:
-            # Read CSV file (Week 6: File handling)
+            
             import csv as csv_module
             from io import StringIO
             
@@ -1627,7 +1627,7 @@ def import_employees():
             departments = {dept.name.lower(): dept.department_id for dept in repo.get_all_departments()}
             roles = {role.title.lower(): role.role_id for role in repo.get_all_roles()}
             
-            # Process each row (Week 2: for loop iteration)
+            
             row_number = 1
             for row in csv_reader:
                 row_number += 1
@@ -1709,7 +1709,7 @@ def import_employees():
                         error_count += 1
                         continue
                     
-                    # Create employee (Week 7: Database operations)
+                    
                     success, message, employee = repo.create_employee(
                         name=name,
                         email=email,
@@ -1762,7 +1762,7 @@ def download_import_template():
     """
     Download CSV template for employee import.
     
-    Week 6 Concept: CSV file generation
+    Export data to CSV format
     """
     import csv as csv_module
     
@@ -1799,8 +1799,8 @@ def audit_logs():
     """
     Admin page to view and filter audit logs.
     
-    Week 5 Concept: Dictionary filtering and comprehensions
-    Week 8 Concept: Database querying with filters
+    Work with dictionary data structures
+    Database querying with filters
     """
     # Get filter parameters
     action_filter = request.args.get('action', '')

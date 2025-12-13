@@ -17,8 +17,7 @@ from typing import Optional, Tuple
 def validate_email(email: str) -> bool:
     """
     Validate email format using regular expressions.
-    
-    Week 5 Concept: Regex pattern matching with re.match()
+    Pattern ensures valid structure with username, @ symbol, domain, and TLD.
     
     Args:
         email: Email address to validate
@@ -72,9 +71,7 @@ def validate_phone(phone: str) -> bool:
 def sanitize_string(input_str: str) -> str:
     """
     Sanitize string input to prevent XSS and other injection attacks.
-    
-    Week 5 Concept: String methods (.strip(), .replace())
-    Week 9 Concept: Input validation for security
+    Removes dangerous HTML/script patterns and trims whitespace.
     
     Args:
         input_str: String to sanitize
@@ -131,9 +128,7 @@ def validate_date_range(start_date: date, end_date: date) -> Tuple[bool, str]:
 def validate_salary(salary_str: str) -> Tuple[bool, str, Optional[float]]:
     """
     Validate and convert salary input.
-    
-    Week 2 Concept: Type conversion and validation
-    Week 3 Concept: Exception handling with try/except
+    Converts string to float and checks for reasonable ranges.
     
     Args:
         salary_str: Salary as string
@@ -204,8 +199,7 @@ def calculate_date_difference(start_date: date, end_date: date) -> int:
 def parse_date(date_str: str, date_format: str = '%Y-%m-%d') -> Optional[date]:
     """
     Parse date string to date object.
-    
-    Week 6 Concept: Exception handling for file/data operations
+    Returns None if string format is invalid or cannot be parsed.
     
     Args:
         date_str: Date as string
@@ -259,9 +253,7 @@ def validate_username(username: str) -> Tuple[bool, str]:
 def validate_required_fields(data: dict, required_fields: list) -> Tuple[bool, str]:
     """
     Check if all required fields are present and non-empty.
-    
-    Week 5 Concept: Dictionary operations
-    Week 2 Concept: Control flow with if/else
+    Validates form data to ensure no required information is missing.
     
     Args:
         data: Dictionary of form data
@@ -272,12 +264,12 @@ def validate_required_fields(data: dict, required_fields: list) -> Tuple[bool, s
     """
     missing_fields = []
     
-    # Iterate through required fields (Week 2: for loops)
+    # Check each required field
     for field in required_fields:
         if field not in data or not data[field] or str(data[field]).strip() == '':
             missing_fields.append(field)
     
-    # Check if any fields are missing (Week 2: if/else)
+    # Build error message if any fields are missing
     if missing_fields:
         # Format field names nicely
         formatted_fields = ', '.join(missing_fields)

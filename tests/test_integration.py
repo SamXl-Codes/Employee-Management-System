@@ -8,9 +8,7 @@ Tests complete workflows and integration between components:
 - API endpoint integration
 - Database transactions
 
-Week 3 Concept: Integration testing
-Week 8 Concept: Testing API endpoints
-Week 9 Concept: Testing complete user workflows
+
 """
 
 import unittest
@@ -128,9 +126,7 @@ class TestEmployeeManagementWorkflow(unittest.TestCase):
 class TestAPIEndpoints(unittest.TestCase):
     """
     Test REST API endpoints.
-    
-    Week 8 Concept: Testing REST APIs
-    Week 8 Concept: JSON response validation
+    Validates JSON responses and data structure from API routes.
     """
     
     def setUp(self):
@@ -163,8 +159,7 @@ class TestAPIEndpoints(unittest.TestCase):
     def test_api_employees_endpoint(self):
         """
         Test /api/employees REST endpoint.
-        
-        Week 8 Concept: REST API testing with JSON responses
+        Verifies JSON format and employee data structure in response.
         """
         self.login_as_admin()
         response = self.client.get('/api/employees')
@@ -234,8 +229,7 @@ class TestDataExport(unittest.TestCase):
     def test_csv_export(self):
         """
         Test CSV export functionality.
-        
-        Week 6 Concept: CSV file generation and download
+        Verifies employee data can be exported to CSV format with proper headers.
         """
         self.login_as_admin()
         response = self.client.get('/export/employees/csv')
@@ -247,8 +241,7 @@ class TestDataExport(unittest.TestCase):
     def test_json_export(self):
         """
         Test JSON export functionality.
-        
-        Week 6 Concept: JSON file generation
+        Ensures employee data can be exported as valid JSON.
         """
         self.login_as_admin()
         response = self.client.get('/export/employees/json')
@@ -264,8 +257,7 @@ class TestDataExport(unittest.TestCase):
 class TestCompleteUserJourney(unittest.TestCase):
     """
     Test complete user journey from login to task completion.
-    
-    Week 9 Concept: End-to-end integration testing
+    End-to-end testing validates full workflows across the application.
     """
     
     def setUp(self):
