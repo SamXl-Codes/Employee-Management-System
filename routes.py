@@ -3534,16 +3534,36 @@ def admin_messages():
     try:
         # Use raw SQL if columns don't exist to avoid ORM issues
         if not has_draft and not has_deleted:
-            # Old schema
+            # Old schema - select only existing columns
             query = text("""
-                SELECT * FROM messages 
+                SELECT message_id, sender_id, recipient_id, subject, body, 
+                       is_broadcast, is_read, sent_at, read_at
+                FROM messages 
                 WHERE sender_id = :user_id 
                 ORDER BY sent_at DESC
             """)
             result = db.session.execute(query, {'user_id': session['user_id']})
             rows = result.fetchall()
-            messages = [Message.query.get(row[0]) if row else None for row in rows]
-            messages = [m for m in messages if m]  # Filter out None
+            
+            # Manually create Message-like objects from raw SQL results
+            messages = []
+            for row in rows:
+                class MessageProxy:
+                    def __init__(self, row):
+                        self.message_id = row[0]
+                        self.sender_id = row[1]
+                        self.recipient_id = row[2]
+                        self.subject = row[3]
+                        self.body = row[4]
+                        self.is_broadcast = row[5]
+                        self.is_read = row[6]
+                        self.sent_at = row[7]
+                        self.read_at = row[8]
+                        # Add relationships
+                        self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                        self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                
+                messages.append(MessageProxy(row))
             drafts_count = 0
             
         else:
@@ -3675,23 +3695,47 @@ def employee_messages():
         # Use raw SQL to avoid ORM column mapping issues with missing columns
         if not has_draft and not has_deleted:
             # Old schema - no draft or deleted columns
+            # Build a custom query that only selects existing columns
             if tab == 'sent':
                 query = text("""
-                    SELECT * FROM messages 
+                    SELECT message_id, sender_id, recipient_id, subject, body, 
+                           is_broadcast, is_read, sent_at, read_at
+                    FROM messages 
                     WHERE sender_id = :user_id 
                     ORDER BY sent_at DESC
                 """)
             else:  # inbox (drafts tab won't work without the column)
                 query = text("""
-                    SELECT * FROM messages 
+                    SELECT message_id, sender_id, recipient_id, subject, body, 
+                           is_broadcast, is_read, sent_at, read_at
+                    FROM messages 
                     WHERE recipient_id = :user_id 
                     ORDER BY sent_at DESC
                 """)
             
             result = db.session.execute(query, {'user_id': session['user_id']})
             rows = result.fetchall()
-            messages = [Message.query.get(row[0]) if row else None for row in rows]
-            messages = [m for m in messages if m]  # Filter out None
+            
+            # Manually create Message-like objects from raw SQL results
+            messages = []
+            for row in rows:
+                # Create a simple object with the needed attributes
+                class MessageProxy:
+                    def __init__(self, row):
+                        self.message_id = row[0]
+                        self.sender_id = row[1]
+                        self.recipient_id = row[2]
+                        self.subject = row[3]
+                        self.body = row[4]
+                        self.is_broadcast = row[5]
+                        self.is_read = row[6]
+                        self.sent_at = row[7]
+                        self.read_at = row[8]
+                        # Add relationships
+                        self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                        self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                
+                messages.append(MessageProxy(row))
             
             unread_count = db.session.execute(
                 text("SELECT COUNT(*) FROM messages WHERE recipient_id = :user_id AND is_read = 0"),
