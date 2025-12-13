@@ -308,6 +308,8 @@
     
     .compose-dialog {
         background: white;
+        position: relative;
+        z-index: 10000;
         border-radius: 16px;
         width: 100%;
         max-width: 900px;
@@ -461,7 +463,7 @@
         max-height: 300px;
         overflow-y: auto;
         display: none;
-        z-index: 9999;
+        z-index: 99999;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         pointer-events: auto;
     }
@@ -961,7 +963,14 @@
     }
     
     function selectRecipient(emp) {
-        document.getElementById('recipient_id').value = emp.user_id;
+        console.log('selectRecipient called with:', emp);
+        const recipientField = document.getElementById('recipientId');
+        if (!recipientField) {
+            console.error('recipientId field not found!');
+            return;
+        }
+        recipientField.value = emp.user_id;
+        console.log('Set recipientId to:', emp.user_id);
         document.getElementById('recipientSearch').value = '';
         document.getElementById('searchResults').classList.remove('active');
         
@@ -982,7 +991,7 @@
     }
     
     function clearRecipient() {
-        document.getElementById('recipient_id').value = '';
+        document.getElementById('recipientId').value = '';
         const tag = document.getElementById('selectedTag');
         const avatar = document.getElementById('selectedAvatar');
         tag.style.display = 'none';
