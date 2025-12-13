@@ -4203,6 +4203,7 @@ def employee_send_message():
 def save_draft():
     """Save message as draft (admin or employee)."""
     from models import Message
+    from sqlalchemy import inspect, text
     
     message_type = request.form.get('message_type')
     recipient_id = request.form.get('recipient_id')
@@ -4211,6 +4212,15 @@ def save_draft():
     draft_id = request.form.get('draft_id')  # For updating existing draft
     
     try:
+        # Check if draft columns exist
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('messages')]
+        has_draft = 'is_draft' in columns
+        
+        if not has_draft:
+            flash('Draft functionality is not yet available. Migration is running on next restart.', 'info')
+            return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+        
         if draft_id:
             # Update existing draft
             draft = Message.query.filter_by(
@@ -4230,23 +4240,28 @@ def save_draft():
             
             flash('Draft updated successfully', 'success')
         else:
-            # Create new draft
-            is_broadcast = (message_type == 'broadcast')
+            # Create new draft using raw SQL to ensure is_draft=1
+            is_broadcast = 1 if message_type == 'broadcast' else 0
             recipient = int(recipient_id) if recipient_id and recipient_id != 'broadcast' else None
             
-            draft = Message(
-                sender_id=session['user_id'],
-                recipient_id=recipient,
-                subject=subject,
-                body=body,
-                is_broadcast=is_broadcast,
-                is_draft=True
-            )
-            db.session.add(draft)
+            query = text("""
+                INSERT INTO messages (sender_id, recipient_id, subject, body, is_broadcast, is_read, is_draft, sent_at)
+                VALUES (:sender_id, :recipient_id, :subject, :body, :is_broadcast, :is_read, :is_draft, :sent_at)
+            """)
+            db.session.execute(query, {
+                'sender_id': session['user_id'],
+                'recipient_id': recipient,
+                'subject': subject,
+                'body': body,
+                'is_broadcast': is_broadcast,
+                'is_read': 0,
+                'is_draft': 1,
+                'sent_at': datetime.utcnow().isoformat()
+            })
             flash('Draft saved successfully', 'success')
         
         db.session.commit()
-        log_audit('CREATE' if not draft_id else 'UPDATE', 'Message', draft.message_id, f'Draft saved: {subject}')
+        log_audit('CREATE' if not draft_id else 'UPDATE', 'Message', None, f'Draft saved: {subject}')
         
     except Exception as e:
         db.session.rollback()
