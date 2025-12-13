@@ -1,16 +1,4 @@
-"""
-Unit Tests for Utility Functions
-
-Tests all validation and helper functions in utils.py including:
-- Email validation (regex)
-- Phone validation (regex)
-- String sanitization
-- Date validation and parsing
-- Salary validation
-- Required field validation
-
-
-"""
+# Unit tests to test utility functions
 
 import unittest
 import sys
@@ -24,13 +12,8 @@ import utils
 
 
 class TestEmailValidation(unittest.TestCase):
-    """
-    Test email validation function.
-    Ensures regex patterns correctly identify valid and invalid email formats.
-    """
-    
-    def test_valid_emails(self):
-        """Test various valid email formats."""
+    def test1_valid_emails(self):
+        # Test various valid email formats
         valid_emails = [
             'user@example.com',
             'john.doe@company.co.uk',
@@ -45,8 +28,8 @@ class TestEmailValidation(unittest.TestCase):
                 self.assertTrue(utils.validate_email(email), 
                                f"Email '{email}' should be valid")
     
-    def test_invalid_emails(self):
-        """Test invalid email formats that should fail."""
+    def test2_invalid_emails(self):
+        # Test invalid email formats that should fail
         invalid_emails = [
             'notanemail',
             'missing@domain',
@@ -63,20 +46,15 @@ class TestEmailValidation(unittest.TestCase):
                 self.assertFalse(utils.validate_email(email) if email else False,
                                 f"Email '{email}' should be invalid")
     
-    def test_email_case_sensitivity(self):
-        """Test email validation is case-insensitive."""
+    def test3_email_case_sensitivity(self):
+        # Test email validation is case-insensitive
         self.assertTrue(utils.validate_email('USER@EXAMPLE.COM'))
         self.assertTrue(utils.validate_email('User@Example.Com'))
 
 
 class TestPhoneValidation(unittest.TestCase):
-    """
-    Test phone number validation.
-    Verifies various international phone number formats are accepted.
-    """
-    
-    def test_valid_phone_formats(self):
-        """Test various valid phone number formats."""
+    def test1_valid_phone_formats(self):
+        # Test various valid phone number formats
         valid_phones = [
             '1234567890',
             '123-456-7890',
@@ -91,8 +69,8 @@ class TestPhoneValidation(unittest.TestCase):
                 self.assertTrue(utils.validate_phone(phone),
                                f"Phone '{phone}' should be valid")
     
-    def test_invalid_phone_formats(self):
-        """Test invalid phone formats."""
+    def test2_invalid_phone_formats(self):
+        # Test invalid phone formats
         invalid_phones = [
             'abc',
             '123',
@@ -109,12 +87,7 @@ class TestPhoneValidation(unittest.TestCase):
 
 
 class TestStringSanitization(unittest.TestCase):
-    """
-    Test string sanitization for XSS prevention.
-    Ensures dangerous HTML and script tags are properly removed from user input.
-    """
-    
-    def test_sanitize_removes_dangerous_tags(self):
+    def test1_sanitize_removes_dangerous_tags(self):
         """Test that dangerous HTML/script tags are removed."""
         dangerous_inputs = [
             '<script>alert("XSS")</script>Hello',
@@ -132,7 +105,7 @@ class TestStringSanitization(unittest.TestCase):
                 self.assertNotIn('javascript:', sanitized.lower())
                 self.assertNotIn('onclick=', sanitized.lower())
     
-    def test_sanitize_strips_whitespace(self):
+    def test1_sanitize_strips_whitespace(self):
         """Test that leading/trailing whitespace is removed."""
         test_cases = [
             ('  hello  ', 'hello'),
@@ -145,7 +118,7 @@ class TestStringSanitization(unittest.TestCase):
                 result = utils.sanitize_string(input_str)
                 self.assertEqual(result, expected)
     
-    def test_sanitize_empty_strings(self):
+    def test2_sanitize_empty_strings(self):
         """Test handling of empty/None strings."""
         self.assertEqual(utils.sanitize_string(''), '')
         self.assertEqual(utils.sanitize_string(None), '')
@@ -157,7 +130,7 @@ class TestDateValidation(unittest.TestCase):
     Validates date ranges for leave requests and other time-based operations.
     """
     
-    def test_validate_date_range_valid(self):
+    def test1_validate_date_range_valid(self):
         """Test valid date ranges."""
         start = date(2024, 1, 1)
         end = date(2024, 1, 10)
@@ -166,14 +139,14 @@ class TestDateValidation(unittest.TestCase):
         self.assertTrue(is_valid)
         self.assertEqual(error_msg, '')
     
-    def test_validate_date_range_same_day(self):
+    def test2_validate_date_range_same_day(self):
         """Test date range with same start and end date."""
         same_date = date(2024, 5, 15)
         
         is_valid, error_msg = utils.validate_date_range(same_date, same_date)
         self.assertTrue(is_valid)
     
-    def test_validate_date_range_invalid(self):
+    def test3_validate_date_range_invalid(self):
         """Test invalid date ranges (end before start)."""
         start = date(2024, 1, 10)
         end = date(2024, 1, 1)
@@ -182,7 +155,7 @@ class TestDateValidation(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertIn('End date must be after start date', error_msg)
     
-    def test_validate_date_range_missing_dates(self):
+    def test4_validate_date_range_missing_dates(self):
         """Test handling of None dates."""
         is_valid, error_msg = utils.validate_date_range(None, date.today())
         self.assertFalse(is_valid)
@@ -190,7 +163,7 @@ class TestDateValidation(unittest.TestCase):
         is_valid, error_msg = utils.validate_date_range(date.today(), None)
         self.assertFalse(is_valid)
     
-    def test_parse_date_valid_formats(self):
+    def test5_parse_date_valid_formats(self):
         """
         Test parsing valid date strings.
         
@@ -207,7 +180,7 @@ class TestDateValidation(unittest.TestCase):
                 result = utils.parse_date(date_str)
                 self.assertEqual(result, expected)
     
-    def test_parse_date_invalid_formats(self):
+    def test6_parse_date_invalid_formats(self):
         """Test parsing invalid date strings."""
         invalid_dates = [
             'not-a-date',
@@ -223,7 +196,7 @@ class TestDateValidation(unittest.TestCase):
                 result = utils.parse_date(date_str)
                 self.assertIsNone(result)
     
-    def test_calculate_date_difference(self):
+    def test7_calculate_date_difference(self):
         """
         Test date difference calculation.
         Calculates inclusive days between two dates for leave requests.
@@ -247,7 +220,7 @@ class TestSalaryValidation(unittest.TestCase):
     Ensures salary inputs are valid numbers within reasonable ranges.
     """
     
-    def test_validate_salary_valid(self):
+    def test1_validate_salary_valid(self):
         """Test valid salary inputs."""
         test_cases = [
             ('50000', 50000.0),
@@ -263,26 +236,26 @@ class TestSalaryValidation(unittest.TestCase):
                 self.assertEqual(error_msg, '')
                 self.assertEqual(value, expected)
     
-    def test_validate_salary_negative(self):
+    def test2_validate_salary_negative(self):
         """Test negative salary is rejected."""
         is_valid, error_msg, value = utils.validate_salary('-5000')
         self.assertFalse(is_valid)
         self.assertIn('positive', error_msg.lower())
         self.assertIsNone(value)
     
-    def test_validate_salary_zero(self):
+    def test3_validate_salary_zero(self):
         """Test zero salary is rejected."""
         is_valid, error_msg, value = utils.validate_salary('0')
         self.assertFalse(is_valid)
         self.assertIn('positive', error_msg.lower())
     
-    def test_validate_salary_too_large(self):
+    def test4_validate_salary_too_large(self):
         """Test unreasonably large salary is rejected."""
         is_valid, error_msg, value = utils.validate_salary('99999999999')
         self.assertFalse(is_valid)
         self.assertIn('exceeds', error_msg.lower())
     
-    def test_validate_salary_invalid_format(self):
+    def test5_validate_salary_invalid_format(self):
         """Test non-numeric inputs are rejected."""
         invalid_inputs = [
             'abc',
@@ -307,7 +280,7 @@ class TestUsernameValidation(unittest.TestCase):
     Validate using regex patterns
     """
     
-    def test_valid_usernames(self):
+    def test1_valid_usernames(self):
         """Test valid username formats."""
         valid_usernames = [
             'user123',
@@ -323,20 +296,20 @@ class TestUsernameValidation(unittest.TestCase):
                 self.assertTrue(is_valid, f"Username '{username}' should be valid")
                 self.assertEqual(error_msg, '')
     
-    def test_username_too_short(self):
+    def test2_username_too_short(self):
         """Test username shorter than 3 characters."""
         is_valid, error_msg = utils.validate_username('ab')
         self.assertFalse(is_valid)
         self.assertIn('at least 3', error_msg)
     
-    def test_username_too_long(self):
+    def test3_username_too_long(self):
         """Test username longer than 64 characters."""
         long_username = 'a' * 65
         is_valid, error_msg = utils.validate_username(long_username)
         self.assertFalse(is_valid)
         self.assertIn('exceed 64', error_msg)
     
-    def test_username_invalid_characters(self):
+    def test4_username_invalid_characters(self):
         """Test usernames with special characters."""
         invalid_usernames = [
             'user@domain',
@@ -361,7 +334,7 @@ class TestRequiredFields(unittest.TestCase):
     Control flow and validation
     """
     
-    def test_all_fields_present(self):
+    def test1_all_fields_present(self):
         """Test when all required fields are provided."""
         data = {
             'name': 'John Doe',
@@ -374,7 +347,7 @@ class TestRequiredFields(unittest.TestCase):
         self.assertTrue(is_valid)
         self.assertEqual(error_msg, '')
     
-    def test_missing_field(self):
+    def test2_missing_field(self):
         """Test when a required field is missing."""
         data = {
             'name': 'John Doe',
@@ -386,7 +359,7 @@ class TestRequiredFields(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertIn('email', error_msg)
     
-    def test_empty_field(self):
+    def test3_empty_field(self):
         """Test when a field is present but empty."""
         data = {
             'name': 'John Doe',
@@ -399,7 +372,7 @@ class TestRequiredFields(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertIn('email', error_msg)
     
-    def test_whitespace_only_field(self):
+    def test4_whitespace_only_field(self):
         """Test when a field contains only whitespace."""
         data = {
             'name': '   ',  # Whitespace only
@@ -420,7 +393,7 @@ class TestCurrencyFormatting(unittest.TestCase):
     String formatting
     """
     
-    def test_format_currency_valid(self):
+    def test1_format_currency_valid(self):
         """Test formatting valid amounts."""
         test_cases = [
             (1234.56, '$1,234.56'),
@@ -434,7 +407,7 @@ class TestCurrencyFormatting(unittest.TestCase):
                 result = utils.format_currency(amount)
                 self.assertEqual(result, expected)
     
-    def test_format_currency_invalid(self):
+    def test2_format_currency_invalid(self):
         """Test handling of invalid inputs."""
         result = utils.format_currency('invalid')
         self.assertEqual(result, '$0.00')

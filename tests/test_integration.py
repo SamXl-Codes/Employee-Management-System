@@ -1,15 +1,4 @@
-"""
-Integration Tests for WorkFlowX System
-
-Tests complete workflows and integration between components:
-- User authentication flow
-- Employee management workflow
-- Leave request approval workflow  
-- API endpoint integration
-- Database transactions
-
-
-"""
+# Integration tests for WorkFlowX system
 
 import unittest
 import sys
@@ -24,26 +13,34 @@ import repository as repo
 
 
 class TestAuthenticationFlow(unittest.TestCase):
-    """Test complete authentication workflow."""
-    
-    def setUp(self):
-        """Set up test client and database."""
+    @classmethod
+    def setUpClass(cls):
+        print("Setting up TestAuthenticationFlow class")
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
-        self.client = app.test_client()
+        cls.client = app.test_client()
+        return super().setUpClass()
+    
+    @classmethod
+    def tearDownClass(cls):
+        print("Tearing down TestAuthenticationFlow class")
+        return super().tearDownClass()
+    
+    def setUp(self):
+        print("\nSet Up Method")
         with app.app_context():
             db.create_all()
             repo.create_user('admin', 'admin123', 'admin')
     
     def tearDown(self):
-        """Clean up test database."""
+        print("Tear Down")
         with app.app_context():
             db.session.remove()
             db.drop_all()
     
-    def test_login_success(self):
-        """Test successful login flow."""
+    def test1_login_success(self):
+        # Test successful login flow
         response = self.client.post('/login', data={
             'username': 'admin',
             'password': 'admin123'
@@ -51,8 +48,8 @@ class TestAuthenticationFlow(unittest.TestCase):
         
         self.assertEqual(response.status_code, 200)
     
-    def test_login_failure(self):
-        """Test failed login with wrong credentials."""
+    def test1_login_failure(self):
+        # Test failed login with wrong credentials.
         response = self.client.post('/login', data={
             'username': 'admin',
             'password': 'wrongpassword'
@@ -61,8 +58,8 @@ class TestAuthenticationFlow(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Invalid', response.data)
     
-    def test_logout(self):
-        """Test logout flow."""
+    def test2_logout(self):
+        # Test logout flow.
         # Login first
         self.client.post('/login', data={
             'username': 'admin',
@@ -102,8 +99,8 @@ class TestEmployeeManagementWorkflow(unittest.TestCase):
             'password': 'admin123'
         })
     
-    def test_view_employees_page(self):
-        """Test viewing employees page requires login."""
+    def test1_view_employees_page(self):
+        # Test viewing employees page requires login.
         # Without login should redirect
         response = self.client.get('/employees')
         self.assertEqual(response.status_code, 302)
@@ -113,8 +110,8 @@ class TestEmployeeManagementWorkflow(unittest.TestCase):
         response = self.client.get('/employees')
         self.assertEqual(response.status_code, 200)
     
-    def test_dashboard_access(self):
-        """Test dashboard access requires authentication."""
+    def test2_dashboard_access(self):
+        # Test dashboard access requires authentication.
         response = self.client.get('/dashboard')
         self.assertEqual(response.status_code, 302)  # Redirect to login
         
@@ -156,8 +153,7 @@ class TestAPIEndpoints(unittest.TestCase):
             'password': 'admin123'
         })
     
-    def test_api_employees_endpoint(self):
-        """
+    def test1_api_employees_endpoint(self):
         Test /api/employees REST endpoint.
         Verifies JSON format and employee data structure in response.
         """
@@ -180,8 +176,8 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertGreater(data['count'], 0)
         self.assertIsInstance(data['employees'], list)
     
-    def test_api_stats_endpoint(self):
-        """Test /api/stats REST endpoint."""
+    def test2_api_stats_endpoint(self):
+        # Test /api/stats REST endpoint.
         self.login_as_admin()
         response = self.client.get('/api/stats')
         
@@ -192,8 +188,8 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertIn('data', data)
         self.assertTrue(data['success'])
     
-    def test_api_requires_authentication(self):
-        """Test API endpoints require authentication."""
+    def test3_api_requires_authentication(self):
+        # Test API endpoints require authentication.
         # Without login should redirect
         response = self.client.get('/api/employees')
         self.assertEqual(response.status_code, 302)
@@ -226,8 +222,7 @@ class TestDataExport(unittest.TestCase):
         """Helper to login."""
         self.client.post('/login', data={'username': 'admin', 'password': 'admin123'})
     
-    def test_csv_export(self):
-        """
+    def test1_csv_export(self):
         Test CSV export functionality.
         Verifies employee data can be exported to CSV format with proper headers.
         """
@@ -238,8 +233,7 @@ class TestDataExport(unittest.TestCase):
         self.assertEqual(response.content_type, 'text/csv')
         self.assertIn('attachment', response.headers.get('Content-Disposition', ''))
     
-    def test_json_export(self):
-        """
+    def test2_json_export(self):
         Test JSON export functionality.
         Ensures employee data can be exported as valid JSON.
         """
@@ -280,8 +274,7 @@ class TestCompleteUserJourney(unittest.TestCase):
             db.session.remove()
             db.drop_all()
     
-    def test_admin_complete_workflow(self):
-        """
+    def test1_admin_complete_workflow(self):
         Test admin workflow: Login -> View Dashboard -> Manage Employees.
         
         Integration of multiple system components.

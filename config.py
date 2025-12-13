@@ -43,18 +43,12 @@ class Config:
         MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
     
     # Build MS SQL Server connection string
-    # Using Windows Authentication (more reliable for local development)
+    # Using SQL Server Authentication
     SQLALCHEMY_DATABASE_URI = (
-        f'mssql+pyodbc://{MSSQL_SERVER}/{MSSQL_DATABASE}?'
-        f'driver={MSSQL_DRIVER}&trusted_connection=yes'
+        f'mssql+pyodbc://{MSSQL_USERNAME}:{MSSQL_PASSWORD}@'
+        f'{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+        f'driver={MSSQL_DRIVER}&TrustServerCertificate=yes'
     )
-    
-    # Alternative: SQL Server Authentication (if needed)
-    # SQLALCHEMY_DATABASE_URI = (
-    #     f'mssql+pyodbc://{MSSQL_USERNAME}:{MSSQL_PASSWORD}@'
-    #     f'{MSSQL_SERVER}/{MSSQL_DATABASE}?'
-    #     f'driver={MSSQL_DRIVER}&TrustServerCertificate=yes'
-    # )
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
