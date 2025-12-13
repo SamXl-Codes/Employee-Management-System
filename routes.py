@@ -4222,17 +4222,18 @@ def save_draft():
         columns = [col['name'] for col in inspector.get_columns('messages')]
         has_draft = 'is_draft' in columns
         
-        if not has_draft:
-            flash('Draft functionality is not yet available. Migration is running on next restart.', 'info')
-            return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
-        
         if draft_id:
             # Update existing draft
-            draft = Message.query.filter_by(
-                message_id=int(draft_id),
-                sender_id=session['user_id'],
-                is_draft=True
-            ).first()
+            if has_draft:
+                draft = Message.query.filter_by(
+                    message_id=int(draft_id),
+                    sender_id=session['user_id'],
+                    is_draft=True
+                ).first()
+            else:
+                # Without is_draft column, can't reliably find drafts
+                flash('Draft update not available without migration', 'warning')
+                return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
             
             if not draft:
                 flash('Draft not found or access denied', 'danger')
@@ -4245,24 +4246,45 @@ def save_draft():
             
             flash('Draft updated successfully', 'success')
         else:
-            # Create new draft using raw SQL to ensure is_draft=1
+            # Create new draft using raw SQL
             is_broadcast = 1 if message_type == 'broadcast' else 0
             recipient = int(recipient_id) if recipient_id and recipient_id != 'broadcast' else None
             
-            query = text("""
-                INSERT INTO messages (sender_id, recipient_id, subject, body, is_broadcast, is_read, is_draft, sent_at)
-                VALUES (:sender_id, :recipient_id, :subject, :body, :is_broadcast, :is_read, :is_draft, :sent_at)
-            """)
-            db.session.execute(query, {
-                'sender_id': session['user_id'],
-                'recipient_id': recipient,
-                'subject': subject,
-                'body': body,
-                'is_broadcast': is_broadcast,
-                'is_read': 0,
-                'is_draft': 1,
-                'sent_at': datetime.utcnow().isoformat()
-            })
+            if has_draft:
+                # New schema with is_draft column
+                query = text("""
+                    INSERT INTO messages (sender_id, recipient_id, subject, body, is_broadcast, is_read, is_draft, sent_at)
+                    VALUES (:sender_id, :recipient_id, :subject, :body, :is_broadcast, :is_read, :is_draft, :sent_at)
+                """)
+                db.session.execute(query, {
+                    'sender_id': session['user_id'],
+                    'recipient_id': recipient,
+                    'subject': subject,
+                    'body': body,
+                    'is_broadcast': is_broadcast,
+                    'is_read': 0,
+                    'is_draft': 1,
+                    'sent_at': datetime.utcnow().isoformat()
+                })
+            else:
+                # Old schema without is_draft - save as regular message with special subject prefix
+                # This is a workaround until migration runs
+                draft_subject = f"[DRAFT] {subject}" if not subject.startswith('[DRAFT]') else subject
+                query = text("""
+                    INSERT INTO messages (sender_id, recipient_id, subject, body, is_broadcast, is_read, sent_at)
+                    VALUES (:sender_id, :recipient_id, :subject, :body, :is_broadcast, :is_read, :sent_at)
+                """)
+                db.session.execute(query, {
+                    'sender_id': session['user_id'],
+                    'recipient_id': recipient,
+                    'subject': draft_subject,
+                    'body': body,
+                    'is_broadcast': is_broadcast,
+                    'is_read': 0,
+                    'sent_at': datetime.utcnow().isoformat()
+                })
+                flash('Draft saved (will appear in sent messages until migration completes)', 'info')
+                
             flash('Draft saved successfully', 'success')
         
         db.session.commit()
