@@ -3845,7 +3845,67 @@ def employee_messages():
 def view_message(message_id):
     """View specific message and mark as read."""
     from models import Message
-    message = Message.query.get_or_404(message_id)
+    from sqlalchemy import inspect, text
+    
+    # Check if new columns exist
+    inspector = inspect(db.engine)
+    columns = [col['name'] for col in inspector.get_columns('messages')]
+    has_draft = 'is_draft' in columns
+    has_deleted = 'deleted_at' in columns
+    
+    # Use raw SQL if columns don't exist
+    if not has_draft and not has_deleted:
+        # Get message with raw SQL
+        query = text("""
+            SELECT message_id, sender_id, recipient_id, subject, body, 
+                   is_broadcast, is_read, sent_at, read_at
+            FROM messages 
+            WHERE message_id = :message_id
+        """)
+        result = db.session.execute(query, {'message_id': message_id})
+        row = result.fetchone()
+        
+        if not row:
+            abort(404)
+        
+        # Create MessageProxy
+        from datetime import datetime
+        class MessageProxy:
+            def __init__(self, row_data):
+                self.message_id = row_data[0]
+                self.sender_id = row_data[1]
+                self.recipient_id = row_data[2]
+                self.subject = row_data[3]
+                self.body = row_data[4]
+                self.is_broadcast = bool(row_data[5])
+                self.is_read = bool(row_data[6])
+                self.sent_at = datetime.fromisoformat(row_data[7]) if row_data[7] else None
+                self.read_at = datetime.fromisoformat(row_data[8]) if row_data[8] else None
+                self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                if self.sender:
+                    self.sender.employees = []
+                if self.recipient:
+                    self.recipient.employees = []
+            
+            def mark_as_read(self):
+                """Mark message as read using raw SQL"""
+                from datetime import datetime
+                update_query = text("""
+                    UPDATE messages 
+                    SET is_read = 1, read_at = :read_at 
+                    WHERE message_id = :message_id
+                """)
+                db.session.execute(update_query, {
+                    'read_at': datetime.utcnow().isoformat(),
+                    'message_id': self.message_id
+                })
+                self.is_read = True
+                self.read_at = datetime.utcnow()
+        
+        message = MessageProxy(row)
+    else:
+        message = Message.query.get_or_404(message_id)
     
     # Ensure user can view messages they sent OR received
     if message.recipient_id != session['user_id'] and message.sender_id != session['user_id']:
@@ -3859,11 +3919,27 @@ def view_message(message_id):
     
     user = repo.get_user_by_id(session['user_id'])
     
-    # Get conversation thread (all messages between these two users)
-    conversation = Message.query.filter(
-        ((Message.sender_id == message.sender_id) & (Message.recipient_id == message.recipient_id)) |
-        ((Message.sender_id == message.recipient_id) & (Message.recipient_id == message.sender_id))
-    ).order_by(Message.sent_at.asc()).all()
+    # Get conversation thread (all messages between these two users) - use raw SQL if needed
+    if not has_draft and not has_deleted:
+        conv_query = text("""
+            SELECT message_id, sender_id, recipient_id, subject, body, 
+                   is_broadcast, is_read, sent_at, read_at
+            FROM messages 
+            WHERE (sender_id = :sender_id AND recipient_id = :recipient_id)
+               OR (sender_id = :recipient_id AND recipient_id = :sender_id)
+            ORDER BY sent_at ASC
+        """)
+        result = db.session.execute(conv_query, {
+            'sender_id': message.sender_id,
+            'recipient_id': message.recipient_id
+        })
+        rows = result.fetchall()
+        conversation = [MessageProxy(row) for row in rows]
+    else:
+        conversation = Message.query.filter(
+            ((Message.sender_id == message.sender_id) & (Message.recipient_id == message.recipient_id)) |
+            ((Message.sender_id == message.recipient_id) & (Message.recipient_id == message.sender_id))
+        ).order_by(Message.sent_at.asc()).all()
     
     # Get employee profiles for all users in conversation
     user_ids = set([msg.sender_id for msg in conversation if msg.sender_id])
@@ -3882,7 +3958,52 @@ def view_message(message_id):
 def admin_view_message(message_id):
     """Admin view sent message."""
     from models import Message
-    message = Message.query.get_or_404(message_id)
+    from sqlalchemy import inspect, text
+    
+    # Check if new columns exist
+    inspector = inspect(db.engine)
+    columns = [col['name'] for col in inspector.get_columns('messages')]
+    has_draft = 'is_draft' in columns
+    has_deleted = 'deleted_at' in columns
+    
+    # Use raw SQL if columns don't exist
+    if not has_draft and not has_deleted:
+        # Get message with raw SQL
+        query = text("""
+            SELECT message_id, sender_id, recipient_id, subject, body, 
+                   is_broadcast, is_read, sent_at, read_at
+            FROM messages 
+            WHERE message_id = :message_id
+        """)
+        result = db.session.execute(query, {'message_id': message_id})
+        row = result.fetchone()
+        
+        if not row:
+            abort(404)
+        
+        # Create MessageProxy (same class as in view_message)
+        from datetime import datetime
+        class MessageProxy:
+            def __init__(self, row_data):
+                self.message_id = row_data[0]
+                self.sender_id = row_data[1]
+                self.recipient_id = row_data[2]
+                self.subject = row_data[3]
+                self.body = row_data[4]
+                self.is_broadcast = bool(row_data[5])
+                self.is_read = bool(row_data[6])
+                self.sent_at = datetime.fromisoformat(row_data[7]) if row_data[7] else None
+                self.read_at = datetime.fromisoformat(row_data[8]) if row_data[8] else None
+                self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                if self.sender:
+                    self.sender.employees = []
+                if self.recipient:
+                    self.recipient.employees = []
+        
+        message = MessageProxy(row)
+    else:
+        message = Message.query.get_or_404(message_id)
     
     # Ensure admin can only view messages they sent
     if message.sender_id != session['user_id']:
@@ -3891,11 +4012,27 @@ def admin_view_message(message_id):
     
     user = repo.get_user_by_id(session['user_id'])
     
-    # Get conversation thread
-    conversation = Message.query.filter(
-        ((Message.sender_id == message.sender_id) & (Message.recipient_id == message.recipient_id)) |
-        ((Message.sender_id == message.recipient_id) & (Message.recipient_id == message.sender_id))
-    ).order_by(Message.sent_at.asc()).all()
+    # Get conversation thread - use raw SQL if needed
+    if not has_draft and not has_deleted:
+        conv_query = text("""
+            SELECT message_id, sender_id, recipient_id, subject, body, 
+                   is_broadcast, is_read, sent_at, read_at
+            FROM messages 
+            WHERE (sender_id = :sender_id AND recipient_id = :recipient_id)
+               OR (sender_id = :recipient_id AND recipient_id = :sender_id)
+            ORDER BY sent_at ASC
+        """)
+        result = db.session.execute(conv_query, {
+            'sender_id': message.sender_id,
+            'recipient_id': message.recipient_id
+        })
+        rows = result.fetchall()
+        conversation = [MessageProxy(row) for row in rows]
+    else:
+        conversation = Message.query.filter(
+            ((Message.sender_id == message.sender_id) & (Message.recipient_id == message.recipient_id)) |
+            ((Message.sender_id == message.recipient_id) & (Message.recipient_id == message.sender_id))
+        ).order_by(Message.sent_at.asc()).all()
     
     # Get employee profiles for all users in conversation
     user_ids = set([msg.sender_id for msg in conversation if msg.sender_id])
