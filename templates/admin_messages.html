@@ -899,10 +899,17 @@
         
         results.innerHTML = filtered.map(emp => {
             const photoUrl = emp.profile_image ? `/static/images/profiles/${emp.profile_image}` : '';
-            const fallback = `<div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;border:2px solid #e5e7eb;">${emp.name[0].toUpperCase()}</div>`;
+            const firstInitial = emp.name.charAt(0).toUpperCase();
+            const fallback = `<div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;border:2px solid #e5e7eb;">${firstInitial}</div>`;
             
             return `
-                <div class="recipient-search-item" onclick='selectRecipient(${JSON.stringify(emp)})'>
+                <div class="recipient-search-item" 
+                     data-user-id="${emp.user_id}" 
+                     data-name="${emp.name}" 
+                     data-email="${emp.email}" 
+                     data-photo="${emp.profile_image || ''}"
+                     data-dept="${emp.department_name || ''}"
+                     onclick="selectRecipientFromData(this)">
                     ${photoUrl ? `<img src="${photoUrl}" class="recipient-search-avatar" onerror="this.outerHTML='${fallback}'">` : fallback}
                     <div class="flex-1 min-w-0">
                         <div class="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
@@ -913,6 +920,17 @@
         }).join('');
         
         results.classList.add('active');
+    }
+    
+    function selectRecipientFromData(element) {
+        const emp = {
+            user_id: element.dataset.userId,
+            name: element.dataset.name,
+            email: element.dataset.email,
+            profile_image: element.dataset.photo,
+            department_name: element.dataset.dept
+        };
+        selectRecipient(emp);
     }
     
     function selectRecipient(emp) {

@@ -686,14 +686,13 @@
         }
         
         results.innerHTML = filtered.map(emp => {
-            const escapedName = emp.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const escapedEmail = emp.email.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const photoPath = emp.profile_image || '';
+            const firstInitial = emp.name.charAt(0).toUpperCase();
             return `
-            <div class="search-result-item" onclick='selectRecipient(${emp.user_id}, "${escapedName}", "${escapedEmail}", "${photoPath}")'>
+            <div class="search-result-item" data-user-id="${emp.user_id}" data-name="${emp.name}" data-email="${emp.email}" data-photo="${photoPath}" onclick="selectRecipientFromElement(this)">
                 ${emp.profile_image ? 
-                    `<img src="/static/images/profiles/${emp.profile_image}" class="w-10 h-10 rounded-full object-cover" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${emp.name[0].toUpperCase()}</div>'">` :
-                    `<div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${emp.name[0].toUpperCase()}</div>`
+                    `<img src="/static/images/profiles/${emp.profile_image}" class="w-10 h-10 rounded-full object-cover" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${firstInitial}</div>'">` :
+                    `<div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${firstInitial}</div>`
                 }
                 <div class="flex-1 min-w-0">
                     <div class="font-medium text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
@@ -704,6 +703,14 @@
         }).join('');
         
         results.classList.add('active');
+    }
+    
+    function selectRecipientFromElement(element) {
+        const userId = element.dataset.userId;
+        const name = element.dataset.name;
+        const email = element.dataset.email;
+        const photo = element.dataset.photo;
+        selectRecipient(userId, name, email, photo);
     }
     
     function selectRecipient(userId, name, email, photo) {
