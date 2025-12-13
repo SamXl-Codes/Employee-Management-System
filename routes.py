@@ -3807,14 +3807,21 @@ def employee_messages():
         if not has_draft and not has_deleted:
             # Old schema - no draft or deleted columns
             if tab == 'drafts':
-                # No drafts without the column - show empty
-                messages = []
-            elif tab == 'sent':
+                # Query for drafts using [DRAFT] prefix workaround
                 query = text("""
                     SELECT message_id, sender_id, recipient_id, subject, body, 
                            is_broadcast, is_read, sent_at, read_at
                     FROM messages 
-                    WHERE sender_id = :user_id 
+                    WHERE sender_id = :user_id AND subject LIKE '[DRAFT]%'
+                    ORDER BY sent_at DESC
+                """)
+            elif tab == 'sent':
+                # Exclude draft messages from sent tab
+                query = text("""
+                    SELECT message_id, sender_id, recipient_id, subject, body, 
+                           is_broadcast, is_read, sent_at, read_at
+                    FROM messages 
+                    WHERE sender_id = :user_id AND subject NOT LIKE '[DRAFT]%'
                     ORDER BY sent_at DESC
                 """)
             else:  # inbox
@@ -3826,11 +3833,8 @@ def employee_messages():
                     ORDER BY sent_at DESC
                 """)
             
-            if tab != 'drafts':
-                result = db.session.execute(query, {'user_id': session['user_id']})
-                rows = result.fetchall()
-            else:
-                rows = []
+            result = db.session.execute(query, {'user_id': session['user_id']})
+            rows = result.fetchall()
             
             # Manually create Message-like objects from raw SQL results
             # Define proxy class once
@@ -3877,7 +3881,10 @@ def employee_messages():
                 text("SELECT COUNT(*) FROM messages WHERE recipient_id = :user_id AND is_read = 0"),
                 {'user_id': session['user_id']}
             ).scalar()
-            drafts_count = 0
+            drafts_count = db.session.execute(
+                text("SELECT COUNT(*) FROM messages WHERE sender_id = :user_id AND subject LIKE '[DRAFT]%'"),
+                {'user_id': session['user_id']}
+            ).scalar()
             
         else:
             # New schema with draft/deleted columns
