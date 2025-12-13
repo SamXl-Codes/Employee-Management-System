@@ -3579,14 +3579,25 @@ def admin_messages():
     try:
         # Use raw SQL if columns don't exist to avoid ORM issues
         if not has_draft and not has_deleted:
-            # Old schema - select only existing columns
-            query = text("""
-                SELECT message_id, sender_id, recipient_id, subject, body, 
-                       is_broadcast, is_read, sent_at, read_at
-                FROM messages 
-                WHERE sender_id = :user_id 
-                ORDER BY sent_at DESC
-            """)
+            # Old schema - use [DRAFT] prefix workaround
+            if tab == 'drafts':
+                # Query for drafts using [DRAFT] prefix
+                query = text("""
+                    SELECT message_id, sender_id, recipient_id, subject, body, 
+                           is_broadcast, is_read, sent_at, read_at
+                    FROM messages 
+                    WHERE sender_id = :user_id AND subject LIKE '[DRAFT]%'
+                    ORDER BY sent_at DESC
+                """)
+            else:  # sent messages
+                # Exclude draft messages from sent tab
+                query = text("""
+                    SELECT message_id, sender_id, recipient_id, subject, body, 
+                           is_broadcast, is_read, sent_at, read_at
+                    FROM messages 
+                    WHERE sender_id = :user_id AND subject NOT LIKE '[DRAFT]%'
+                    ORDER BY sent_at DESC
+                """)
             result = db.session.execute(query, {'user_id': session['user_id']})
             rows = result.fetchall()
             
@@ -3629,7 +3640,10 @@ def admin_messages():
                         raise
             
             messages = [MessageProxy(row) for row in rows]
-            drafts_count = 0
+            drafts_count = db.session.execute(
+                text("SELECT COUNT(*) FROM messages WHERE sender_id = :user_id AND subject LIKE '[DRAFT]%'"),
+                {'user_id': session['user_id']}
+            ).scalar()
             app.logger.info(f"Loaded {len(messages)} admin messages for tab={tab} using old schema")
             
         else:
@@ -3668,10 +3682,10 @@ def admin_messages():
         return redirect(url_for('dashboard'))
 
 
-@app.route('/admin/messages/compose', methods=['GET', 'POST'])
+@app.route('/admin/messages/send', methods=['POST'])
 @admin_required
-def compose_message():
-    """Admin compose and send message (specific or broadcast)."""
+def admin_send_message():
+    """Admin send message (specific or broadcast)."""
     from models import Message
     
     if request.method == 'POST':
@@ -3681,7 +3695,7 @@ def compose_message():
         
         if not subject or not body:
             flash('Subject and message body are required', 'danger')
-            return redirect(url_for('compose_message'))
+            return redirect(url_for('admin_messages'))
         
         try:
             from sqlalchemy import inspect, text
@@ -3737,7 +3751,7 @@ def compose_message():
                 recipient_id = request.form.get('recipient_id')
                 if not recipient_id:
                     flash('Please select a recipient', 'danger')
-                    return redirect(url_for('compose_message'))
+                    return redirect(url_for('admin_messages'))
                 
                 if not has_draft:
                     # Use raw SQL without draft columns
@@ -3775,13 +3789,8 @@ def compose_message():
         except Exception as e:
             db.session.rollback()
             flash(f'Error sending message: {str(e)}', 'danger')
-            return redirect(url_for('compose_message'))
     
-    # GET request - show compose form
-    user = repo.get_user_by_id(session['user_id'])
-    employees = Employee.query.order_by(Employee.name).all()
-    employees_data = [emp.to_dict() for emp in employees]
-    return render_template('compose_message.html', user=user, employees=employees_data)
+    return redirect(url_for('admin_messages'))
 
 
 @app.route('/employee/messages')
