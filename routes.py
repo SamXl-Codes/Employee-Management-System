@@ -4131,17 +4131,6 @@ def employee_send_message():
 def save_draft():
     """Save message as draft (admin or employee)."""
     from models import Message
-    from sqlalchemy import inspect
-    
-    # Check if draft column exists
-    inspector = inspect(db.engine)
-    columns = [col['name'] for col in inspector.get_columns('messages')]
-    has_draft = 'is_draft' in columns
-    
-    if not has_draft:
-        # Draft functionality not available without the column
-        flash('Draft functionality is not available in this deployment. Please send the message instead.', 'warning')
-        return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
     
     message_type = request.form.get('message_type')
     recipient_id = request.form.get('recipient_id')
@@ -4199,19 +4188,6 @@ def save_draft():
 def delete_message(message_id):
     """Soft delete a message (marks as deleted without removing from database)."""
     from models import Message
-    from sqlalchemy import inspect
-    
-    # Check if deleted_at column exists
-    inspector = inspect(db.engine)
-    columns = [col['name'] for col in inspector.get_columns('messages')]
-    has_deleted = 'deleted_at' in columns
-    
-    if not has_deleted:
-        flash('Delete functionality is not available in this deployment. Messages cannot be deleted.', 'warning')
-        if session.get('role') == 'admin':
-            return redirect(url_for('admin_messages'))
-        else:
-            return redirect(url_for('employee_messages'))
     
     try:
         message = Message.query.get(message_id)
@@ -4244,16 +4220,6 @@ def delete_message(message_id):
 def send_draft(draft_id):
     """Convert a draft message to sent message."""
     from models import Message
-    from sqlalchemy import inspect
-    
-    # Check if draft column exists
-    inspector = inspect(db.engine)
-    columns = [col['name'] for col in inspector.get_columns('messages')]
-    has_draft = 'is_draft' in columns
-    
-    if not has_draft:
-        flash('Draft functionality is not available in this deployment.', 'warning')
-        return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
     
     try:
         draft = Message.query.filter_by(

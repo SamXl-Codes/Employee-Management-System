@@ -391,23 +391,6 @@
             </h2>
         </div>
         
-        <!-- Migration Banner for Employees (only admin can run migration, so show info) -->
-        {% if current_tab == 'drafts' and drafts_count == 0 %}
-        <div style="margin: 16px; padding: 14px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #fbbf24; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="display: flex; align-items: start; gap: 10px;">
-                <svg class="w-5 h-5 flex-shrink-0" style="color: #d97706; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div style="flex: 1;">
-                    <h3 style="font-weight: 600; color: #92400e; margin-bottom: 6px; font-size: 15px;">📝 Draft Feature Not Available</h3>
-                    <p style="color: #78350f; font-size: 14px; line-height: 1.5;">
-                        Draft functionality requires a database update. Please contact your administrator to enable this feature.
-                    </p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
         <div class="message-list">
             {% if messages %}
                 {% for message in messages %}

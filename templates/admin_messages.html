@@ -575,31 +575,6 @@
     }
 </style>
 
-<!-- Migration Banner (only show if drafts_count is 0 and current_tab is drafts) -->
-{% if current_tab == 'drafts' and drafts_count == 0 %}
-<div style="margin: 20px; padding: 16px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #fbbf24; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-    <div style="display: flex; align-items: start; gap: 12px;">
-        <svg class="w-6 h-6 flex-shrink-0" style="color: #d97706; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <div style="flex: 1;">
-            <h3 style="font-weight: 600; color: #92400e; margin-bottom: 8px; font-size: 16px;">⚙️ Database Migration Required</h3>
-            <p style="color: #78350f; margin-bottom: 12px; line-height: 1.5;">
-                Draft and delete features require additional database columns. Click the button below to enable these features.
-            </p>
-            <form method="POST" action="{{ url_for('run_migration') }}" style="display: inline;">
-                <button type="submit" 
-                        onclick="return confirm('This will add is_draft and deleted_at columns to the messages table. Continue?')"
-                        style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: all 0.2s;">
-                    🚀 Run Migration Now
-                </button>
-            </form>
-            <span style="color: #92400e; margin-left: 12px; font-size: 14px;">Takes only 2 seconds</span>
-        </div>
-    </div>
-</div>
-{% endif %}
-
 <div class="admin-messages-wrapper">
     <!-- Sidebar -->
     <div class="messages-sidebar">
