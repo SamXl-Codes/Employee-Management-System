@@ -1873,27 +1873,27 @@ def employee_dashboard():
     Employee personal dashboard with personalized stats.
     Shows only information relevant to the logged-in employee.
     """
-    user = repo.get_user_by_id(session['user_id'])
-    
-    # Try to find employee by email matching username
-    emp = Employee.query.filter_by(email=user.username).first()
-    
-    # If not found, try with @company.com or @workflowx.com
-    if not emp:
-        emp = Employee.query.filter(
-            (Employee.email == user.username + '@company.com') |
-            (Employee.email == user.username + '@workflowx.com') |
-            (Employee.email.like(f'%{user.username}%'))
-        ).first()
-    
-    # If still not found, show error message
-    if not emp:
-        flash('Your employee profile is not linked to this account. Please contact HR.', 'danger')
-        return redirect(url_for('logout'))
-    
-    # Calculate attendance rate (last 30 days)
-    from datetime import timedelta
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    try:
+        user = repo.get_user_by_id(session['user_id'])
+        
+        # Try to find employee by email matching username
+        emp = Employee.query.filter_by(email=user.username).first()
+        
+        # If not found, try with @company.com or @workflowx.com
+        if not emp:
+            emp = Employee.query.filter(
+                (Employee.email == user.username + '@company.com') |
+                (Employee.email == user.username + '@workflowx.com') |
+                (Employee.email.like(f'%{user.username}%'))
+            ).first()
+        
+        # If still not found, show error message
+        if not emp:
+            flash('Your employee profile is not linked to this account. Please contact HR.', 'danger')
+            return redirect(url_for('logout'))
+        
+        # Calculate attendance rate (last 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     today = datetime.utcnow().date()
     
     recent_attendance = Attendance.query.filter(
@@ -1931,25 +1931,30 @@ def employee_dashboard():
     days_employed = (today - emp.date_joined).days if emp.date_joined else 0
     years_employed = round(days_employed / 365.25, 1)
     
-    # Get today's attendance status
-    today_attendance = Attendance.query.filter_by(
-        employee_id=emp.employee_id,
-        date=today
-    ).first()
+        # Get today's attendance status
+        today_attendance = Attendance.query.filter_by(
+            employee_id=emp.employee_id,
+            date=today
+        ).first()
+        
+        return render_template('employee_dashboard.html',
+                             current_user=emp,
+                             attendance_rate=attendance_rate,
+                             present_count=present_count,
+                             late_count=late_count,
+                             absent_count=absent_count,
+                             pending_leaves=pending_leaves,
+                             approved_leaves=approved_leaves,
+                             rejected_leaves=rejected_leaves,
+                             recent_leaves=recent_leaves,
+                             years_employed=years_employed,
+                             today_attendance=today_attendance,
+                             user_role=session.get('role'))
     
-    return render_template('employee_dashboard.html',
-                         current_user=emp,
-                         attendance_rate=attendance_rate,
-                         present_count=present_count,
-                         late_count=late_count,
-                         absent_count=absent_count,
-                         pending_leaves=pending_leaves,
-                         approved_leaves=approved_leaves,
-                         rejected_leaves=rejected_leaves,
-                         recent_leaves=recent_leaves,
-                         years_employed=years_employed,
-                         today_attendance=today_attendance,
-                         user_role=session.get('role'))
+    except Exception as e:
+        app.logger.error(f"Error in employee_dashboard: {str(e)}")
+        flash('An error occurred loading your dashboard. Please try again.', 'danger')
+        return redirect(url_for('login'))
 
 
 @app.route('/employee/profile')
