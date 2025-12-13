@@ -545,8 +545,9 @@
         </div>
         
         <form method="POST" action="{{ url_for('employee_send_message') }}" id="composeForm">
+            <input type="hidden" name="draft_id" id="draft_id">
             <div class="compose-body">
-                <div class="compose-field">
+                <div class="compose-field" id="recipientSection">
                     <label>To:</label>
                     <div class="selected-recipient" id="selectedRecipient" style="margin-left: 8px;">
                         <img id="selectedPhoto" class="w-8 h-8 rounded-full" src="" alt="">
@@ -563,18 +564,18 @@
                                placeholder="Search employee or HR staff..."
                                autocomplete="off"
                                oninput="searchRecipients(this.value)">
-                        <input type="hidden" name="recipient_id" id="recipientId">
+                        <input type="hidden" name="recipient_id" id="recipient_id">
                         <div class="search-results" id="searchResults"></div>
                     </div>
                 </div>
                 
                 <div class="compose-field">
                     <label>Subject:</label>
-                    <input type="text" name="subject" placeholder="Subject" required>
+                    <input type="text" name="subject" id="subject" placeholder="Subject" required>
                 </div>
                 
                 <div class="compose-editor">
-                    <textarea name="body" placeholder="Write your message here..." required></textarea>
+                    <textarea name="body" id="body" placeholder="Write your message here..." required></textarea>
                 </div>
             </div>
             
@@ -607,36 +608,38 @@
     }
     
     function editDraft(draftId, subject, body, recipientId, isBroadcast) {
+        console.log('Editing draft:', {draftId, subject, body, recipientId, isBroadcast});
+        
         // Open compose modal
         document.getElementById('composeModal').classList.add('active');
         
-        // Pre-fill form
-        document.getElementById('draft_id').value = draftId;
-        document.getElementById('subject').value = subject;
-        document.getElementById('body').value = body;
+        // Pre-fill form fields
+        document.getElementById('draft_id').value = draftId || '';
+        document.getElementById('subject').value = subject || '';
+        document.getElementById('body').value = body || '';
         
-        // Set message type
-        const messageType = isBroadcast ? 'broadcast' : 'specific';
-        document.querySelector(`input[name="message_type"][value="${messageType}"]`).checked = true;
-        
-        // Show/hide recipient field based on message type
+        // Handle recipient
         const recipientSection = document.getElementById('recipientSection');
         if (isBroadcast) {
-            recipientSection.classList.add('hidden');
+            recipientSection.style.display = 'none';
         } else {
-            recipientSection.classList.remove('hidden');
-            if (recipientId) {
+            recipientSection.style.display = 'block';
+            if (recipientId && recipientId !== '') {
                 document.getElementById('recipient_id').value = recipientId;
                 // Find and display recipient name
                 const recipient = employees.find(e => e.user_id == recipientId);
+                console.log('Found recipient:', recipient);
                 if (recipient) {
-                    document.getElementById('selectedRecipient').innerHTML = `
-                        <div class="selected-recipient-tag">
-                            <span>${recipient.name} (${recipient.email})</span>
-                            <button type="button" onclick="clearRecipient()">×</button>
-                        </div>
-                    `;
+                    const selectedRecipient = document.getElementById('selectedRecipient');
+                    selectedRecipient.style.display = 'flex';
+                    document.getElementById('selectedName').textContent = `${recipient.name} (${recipient.email})`;
+                    // Hide search box when recipient is selected
+                    document.querySelector('.recipient-search').style.display = 'none';
                 }
+            } else {
+                // Show search box for new recipient selection
+                document.querySelector('.recipient-search').style.display = 'block';
+                document.getElementById('selectedRecipient').style.display = 'none';
             }
         }
         
@@ -646,17 +649,20 @@
     
     function openCompose() {
         document.getElementById('composeModal').classList.add('active');
-        document.getElementById('recipientSearch').focus();
-        // Reset form when opening fresh compose
+        // Reset form and show recipient search
         document.getElementById('composeForm').reset();
-        document.querySelector('#composeModal h3').textContent = 'Compose Message';
+        document.getElementById('recipientSection').style.display = 'block';
+        document.querySelector('.recipient-search').style.display = 'block';
+        document.getElementById('selectedRecipient').style.display = 'none';
+        document.querySelector('#composeModal h3').textContent = 'New Message';
+        document.getElementById('recipientSearch').focus();
     }
     
     function closeCompose() {
         document.getElementById('composeModal').classList.remove('active');
         document.getElementById('composeForm').reset();
         clearRecipient();
-        document.querySelector('#composeModal h3').textContent = 'Compose Message';
+        document.querySelector('#composeModal h3').textContent = 'New Message';
     }
     
     function searchRecipients(query) {
