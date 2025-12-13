@@ -48,11 +48,12 @@ def inject_unread_messages():
     unread_count = 0
     if 'user_id' in session and session.get('role') == 'employee':
         try:
-            # Count unread messages for this employee (both direct and broadcast)
+            # Count unread messages for this employee (both direct and broadcast, not deleted)
             user_id = session['user_id']
             unread_count = Message.query.filter(
                 ((Message.recipient_id == user_id) | (Message.is_broadcast == True)),
-                Message.is_read == False
+                Message.is_read == False,
+                Message.deleted_at.is_(None)
             ).count()
         except Exception as e:
             app.logger.error(f"Error counting unread messages: {str(e)}")
@@ -3424,20 +3425,41 @@ def manage_shifts():
 @app.route('/admin/messages')
 @admin_required
 def admin_messages():
-    """Admin view all sent messages (broadcast and specific)."""
+    """Admin view all sent messages (broadcast and specific) with drafts."""
     from models import Message
     user = repo.get_user_by_id(session['user_id'])
     
-    # Get all messages sent by admin
-    sent_messages = Message.query.filter_by(sender_id=session['user_id'])\
-        .order_by(Message.sent_at.desc()).all()
+    # Get tab parameter (sent, drafts)
+    tab = request.args.get('tab', 'sent')
+    
+    if tab == 'drafts':
+        # Get draft messages only
+        messages = Message.query.filter_by(
+            sender_id=session['user_id'],
+            is_draft=True
+        ).filter(Message.deleted_at.is_(None))\
+         .order_by(Message.sent_at.desc()).all()
+    else:  # sent messages
+        # Get all sent messages (not drafts, not deleted)
+        messages = Message.query.filter_by(
+            sender_id=session['user_id'],
+            is_draft=False
+        ).filter(Message.deleted_at.is_(None))\
+         .order_by(Message.sent_at.desc()).all()
+    
+    # Count drafts
+    drafts_count = Message.query.filter_by(
+        sender_id=session['user_id'],
+        is_draft=True
+    ).filter(Message.deleted_at.is_(None)).count()
     
     # Get all employees for compose modal (search) - convert to dict
     employees = Employee.query.order_by(Employee.name).all()
     employees_data = [emp.to_dict() for emp in employees]
     
-    log_audit('VIEW', 'Messages', None, 'Admin viewed sent messages')
-    return render_template('admin_messages.html', user=user, messages=sent_messages, employees_data=employees_data)
+    log_audit('VIEW', 'Messages', None, f'Admin viewed messages ({tab})')
+    return render_template('admin_messages.html', user=user, messages=messages, 
+                         employees_data=employees_data, current_tab=tab, drafts_count=drafts_count)
 
 
 @app.route('/admin/messages/compose', methods=['GET', 'POST'])
@@ -3514,24 +3536,45 @@ def compose_message():
 @app.route('/employee/messages')
 @login_required
 def employee_messages():
-    """Employee Gmail-style messaging interface (inbox, sent, compose)."""
+    """Employee Gmail-style messaging interface (inbox, sent, drafts, compose)."""
     from models import Message
     user = repo.get_user_by_id(session['user_id'])
     
-    # Get tab parameter (inbox or sent)
+    # Get tab parameter (inbox, sent, or drafts)
     tab = request.args.get('tab', 'inbox')
     
     if tab == 'sent':
-        # Get messages sent by this employee
-        messages = Message.query.filter_by(sender_id=session['user_id'])\
-            .order_by(Message.sent_at.desc()).all()
+        # Get messages sent by this employee (not drafts, not deleted)
+        messages = Message.query.filter_by(
+            sender_id=session['user_id'],
+            is_draft=False
+        ).filter(Message.deleted_at.is_(None))\
+         .order_by(Message.sent_at.desc()).all()
+    elif tab == 'drafts':
+        # Get draft messages only
+        messages = Message.query.filter_by(
+            sender_id=session['user_id'],
+            is_draft=True
+        ).filter(Message.deleted_at.is_(None))\
+         .order_by(Message.sent_at.desc()).all()
     else:  # inbox
-        # Get messages received by this employee
-        messages = Message.query.filter_by(recipient_id=session['user_id'])\
-            .order_by(Message.sent_at.desc()).all()
+        # Get messages received by this employee (not deleted)
+        messages = Message.query.filter_by(
+            recipient_id=session['user_id']
+        ).filter(Message.deleted_at.is_(None))\
+         .order_by(Message.sent_at.desc()).all()
     
-    # Count unread messages
-    unread_count = Message.query.filter_by(recipient_id=session['user_id'], is_read=False).count()
+    # Count unread messages (not deleted)
+    unread_count = Message.query.filter_by(
+        recipient_id=session['user_id'], 
+        is_read=False
+    ).filter(Message.deleted_at.is_(None)).count()
+    
+    # Count drafts
+    drafts_count = Message.query.filter_by(
+        sender_id=session['user_id'],
+        is_draft=True
+    ).filter(Message.deleted_at.is_(None)).count()
     
     # Get all employees for compose modal (search) - convert to dict
     employees = Employee.query.order_by(Employee.name).all()
@@ -3542,6 +3585,7 @@ def employee_messages():
                           user=user, 
                           messages=messages, 
                           unread_count=unread_count,
+                          drafts_count=drafts_count,
                           employees=employees_data,
                           current_tab=tab)
 
@@ -3648,6 +3692,165 @@ def employee_send_message():
         flash(f'Error sending message: {str(e)}', 'danger')
     
     return redirect(url_for('employee_messages', tab='sent'))
+
+
+@app.route('/messages/save-draft', methods=['POST'])
+@login_required
+def save_draft():
+    """Save message as draft (admin or employee)."""
+    from models import Message
+    
+    message_type = request.form.get('message_type')
+    recipient_id = request.form.get('recipient_id')
+    subject = request.form.get('subject', '(No Subject)')
+    body = request.form.get('body', '')
+    draft_id = request.form.get('draft_id')  # For updating existing draft
+    
+    try:
+        if draft_id:
+            # Update existing draft
+            draft = Message.query.filter_by(
+                message_id=int(draft_id),
+                sender_id=session['user_id'],
+                is_draft=True
+            ).first()
+            
+            if not draft:
+                flash('Draft not found or access denied', 'danger')
+                return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+            
+            draft.subject = subject
+            draft.body = body
+            draft.recipient_id = int(recipient_id) if recipient_id and recipient_id != 'broadcast' else None
+            draft.is_broadcast = (message_type == 'broadcast')
+            
+            flash('Draft updated successfully', 'success')
+        else:
+            # Create new draft
+            is_broadcast = (message_type == 'broadcast')
+            recipient = int(recipient_id) if recipient_id and recipient_id != 'broadcast' else None
+            
+            draft = Message(
+                sender_id=session['user_id'],
+                recipient_id=recipient,
+                subject=subject,
+                body=body,
+                is_broadcast=is_broadcast,
+                is_draft=True
+            )
+            db.session.add(draft)
+            flash('Draft saved successfully', 'success')
+        
+        db.session.commit()
+        log_audit('CREATE' if not draft_id else 'UPDATE', 'Message', draft.message_id, f'Draft saved: {subject}')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error saving draft: {str(e)}', 'danger')
+    
+    return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+
+
+@app.route('/messages/delete/<int:message_id>', methods=['POST'])
+@login_required
+def delete_message(message_id):
+    """Soft delete a message (marks as deleted without removing from database)."""
+    from models import Message
+    
+    try:
+        message = Message.query.get(message_id)
+        
+        if not message:
+            flash('Message not found', 'danger')
+        elif message.sender_id != session['user_id'] and message.recipient_id != session['user_id']:
+            flash('You do not have permission to delete this message', 'danger')
+        else:
+            # Soft delete - mark as deleted instead of removing
+            message.deleted_at = datetime.utcnow()
+            db.session.commit()
+            
+            log_audit('DELETE', 'Message', message_id, f'Message deleted: {message.subject}')
+            flash('Message deleted successfully', 'success')
+    
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting message: {str(e)}', 'danger')
+    
+    # Redirect based on role
+    if session.get('role') == 'admin':
+        return redirect(url_for('admin_messages'))
+    else:
+        return redirect(url_for('employee_messages'))
+
+
+@app.route('/messages/send-draft/<int:draft_id>', methods=['POST'])
+@login_required
+def send_draft(draft_id):
+    """Convert a draft message to sent message."""
+    from models import Message
+    
+    try:
+        draft = Message.query.filter_by(
+            message_id=draft_id,
+            sender_id=session['user_id'],
+            is_draft=True
+        ).first()
+        
+        if not draft:
+            flash('Draft not found or already sent', 'danger')
+            return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+        
+        # Validate required fields
+        if not draft.subject or not draft.body:
+            flash('Subject and body are required to send message', 'danger')
+            return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+        
+        if draft.is_broadcast:
+            # Send broadcast - create copies for all employees
+            employees = Employee.query.all()
+            sent_count = 0
+            for emp in employees:
+                user = User.query.filter_by(username=emp.email).first()
+                if user:
+                    message = Message(
+                        sender_id=draft.sender_id,
+                        recipient_id=user.user_id,
+                        subject=draft.subject,
+                        body=draft.body,
+                        is_broadcast=True,
+                        is_draft=False
+                    )
+                    db.session.add(message)
+                    sent_count += 1
+            
+            # Delete the draft
+            db.session.delete(draft)
+            db.session.commit()
+            
+            log_audit('CREATE', 'Message', None, f'Broadcast sent from draft: {draft.subject}')
+            flash(f'Broadcast message sent to {sent_count} employees', 'success')
+        else:
+            # Send to specific recipient
+            if not draft.recipient_id:
+                flash('Please select a recipient', 'danger')
+                return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+            
+            # Mark as sent
+            draft.is_draft = False
+            draft.sent_at = datetime.utcnow()
+            db.session.commit()
+            
+            log_audit('UPDATE', 'Message', draft.message_id, f'Draft sent: {draft.subject}')
+            flash('Message sent successfully', 'success')
+    
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error sending draft: {str(e)}', 'danger')
+    
+    if session.get('role') == 'admin':
+        return redirect(url_for('admin_messages'))
+    else:
+        return redirect(url_for('employee_messages'))
 
 
 # ==================== ERROR HANDLERS ====================

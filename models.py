@@ -1175,14 +1175,16 @@ class Message(db.Model):
     body = db.Column(db.Text, nullable=False)
     is_broadcast = db.Column(db.Boolean, default=False)
     is_read = db.Column(db.Boolean, default=False)
+    is_draft = db.Column(db.Boolean, default=False)
     sent_at = db.Column(db.DateTime, default=datetime.utcnow)
     read_at = db.Column(db.DateTime, nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='received_messages')
     
-    def __init__(self, sender_id, subject, body, recipient_id=None, is_broadcast=False):
+    def __init__(self, sender_id, subject, body, recipient_id=None, is_broadcast=False, is_draft=False):
         """
         Initialize a new Message.
         
@@ -1192,12 +1194,14 @@ class Message(db.Model):
             body: Message content
             recipient_id: ID of employee recipient (None for broadcast)
             is_broadcast: Whether message is broadcast to all employees
+            is_draft: Whether message is saved as draft (not sent yet)
         """
         self.sender_id = sender_id
         self.recipient_id = recipient_id
         self.subject = subject
         self.body = body
         self.is_broadcast = is_broadcast
+        self.is_draft = is_draft
     
     def mark_as_read(self):
         """Mark message as read and record the timestamp."""
@@ -1216,8 +1220,10 @@ class Message(db.Model):
             'body': self.body,
             'is_broadcast': self.is_broadcast,
             'is_read': self.is_read,
+            'is_draft': self.is_draft,
             'sent_at': self.sent_at.strftime('%Y-%m-%d %H:%M:%S') if self.sent_at else None,
-            'read_at': self.read_at.strftime('%Y-%m-%d %H:%M:%S') if self.read_at else None
+            'read_at': self.read_at.strftime('%Y-%m-%d %H:%M:%S') if self.read_at else None,
+            'deleted_at': self.deleted_at.strftime('%Y-%m-%d %H:%M:%S') if self.deleted_at else None
         }
     
     def __repr__(self):
