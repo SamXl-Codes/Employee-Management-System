@@ -688,18 +688,34 @@
         results.innerHTML = filtered.map(emp => {
             const photoPath = emp.profile_image || '';
             const firstInitial = emp.name.charAt(0).toUpperCase();
-            return `
-            <div class="search-result-item" data-user-id="${emp.user_id}" data-name="${emp.name}" data-email="${emp.email}" data-photo="${photoPath}" onclick="selectRecipientFromElement(this)">
-                ${emp.profile_image ? 
-                    `<img src="/static/images/profiles/${emp.profile_image}" class="w-10 h-10 rounded-full object-cover" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${firstInitial}</div>'">` :
-                    `<div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${firstInitial}</div>`
-                }
-                <div class="flex-1 min-w-0">
-                    <div class="font-medium text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
-                </div>
-            </div>
-        `;
+            
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'search-result-item';
+            itemDiv.dataset.userId = emp.user_id;
+            itemDiv.dataset.name = emp.name;
+            itemDiv.dataset.email = emp.email;
+            itemDiv.dataset.photo = photoPath;
+            itemDiv.onclick = function() { selectRecipientFromElement(this); };
+            
+            if (emp.profile_image) {
+                itemDiv.innerHTML = `
+                    <img src="/static/images/profiles/${emp.profile_image}" class="w-10 h-10 rounded-full object-cover" onerror="this.outerHTML='<div class=&quot;w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold&quot;>${firstInitial}</div>'">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
+                    </div>
+                `;
+            } else {
+                itemDiv.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${firstInitial}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
+                    </div>
+                `;
+            }
+            
+            return itemDiv.outerHTML;
         }).join('');
         
         results.classList.add('active');

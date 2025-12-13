@@ -900,23 +900,35 @@
         results.innerHTML = filtered.map(emp => {
             const photoUrl = emp.profile_image ? `/static/images/profiles/${emp.profile_image}` : '';
             const firstInitial = emp.name.charAt(0).toUpperCase();
-            const fallback = `<div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;border:2px solid #e5e7eb;">${firstInitial}</div>`;
             
-            return `
-                <div class="recipient-search-item" 
-                     data-user-id="${emp.user_id}" 
-                     data-name="${emp.name}" 
-                     data-email="${emp.email}" 
-                     data-photo="${emp.profile_image || ''}"
-                     data-dept="${emp.department_name || ''}"
-                     onclick="selectRecipientFromData(this)">
-                    ${photoUrl ? `<img src="${photoUrl}" class="recipient-search-avatar" onerror="this.outerHTML='${fallback}'">` : fallback}
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'recipient-search-item';
+            itemDiv.dataset.userId = emp.user_id;
+            itemDiv.dataset.name = emp.name;
+            itemDiv.dataset.email = emp.email;
+            itemDiv.dataset.photo = emp.profile_image || '';
+            itemDiv.dataset.dept = emp.department_name || '';
+            itemDiv.onclick = function() { selectRecipientFromData(this); };
+            
+            if (photoUrl) {
+                itemDiv.innerHTML = `
+                    <img src="${photoUrl}" class="recipient-search-avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div style=&quot;width:40px;height:40px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;border:2px solid #e5e7eb;&quot;>${firstInitial}</div>'">
                     <div class="flex-1 min-w-0">
                         <div class="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
                         <div class="text-xs text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                itemDiv.innerHTML = `
+                    <div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;border:2px solid #e5e7eb;">${firstInitial}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">${emp.name}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
+                    </div>
+                `;
+            }
+            
+            return itemDiv.outerHTML;
         }).join('');
         
         results.classList.add('active');

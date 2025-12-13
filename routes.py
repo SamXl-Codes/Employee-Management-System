@@ -3675,7 +3675,19 @@ def admin_messages():
                     query = query.filter_by(is_draft=False)
                 if has_deleted:
                     query = query.filter(Message.deleted_at.is_(None))
-                messages = query.order_by(Message.sent_at.desc()).all()
+                all_messages = query.order_by(Message.sent_at.desc()).all()
+                
+                # Deduplicate broadcast messages
+                seen_broadcasts = set()
+                messages = []
+                for msg in all_messages:
+                    if msg.is_broadcast:
+                        broadcast_key = (msg.subject, msg.sent_at.isoformat() if msg.sent_at else None)
+                        if broadcast_key not in seen_broadcasts:
+                            seen_broadcasts.add(broadcast_key)
+                            messages.append(msg)
+                    else:
+                        messages.append(msg)
             
             # Count drafts
             drafts_count = 0
