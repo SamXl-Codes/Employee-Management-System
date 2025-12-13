@@ -3591,11 +3591,15 @@ def admin_messages():
                 """)
             else:  # sent messages
                 # Exclude draft messages from sent tab
+                # For broadcasts, only show one row per broadcast (group by subject and sent_at)
                 query = text("""
-                    SELECT message_id, sender_id, recipient_id, subject, body, 
-                           is_broadcast, is_read, sent_at, read_at
+                    SELECT MIN(message_id) as message_id, sender_id, 
+                           CASE WHEN is_broadcast = 1 THEN NULL ELSE recipient_id END as recipient_id,
+                           subject, body, is_broadcast, is_read, sent_at, read_at
                     FROM messages 
                     WHERE sender_id = :user_id AND subject NOT LIKE '[DRAFT]%'
+                    GROUP BY sender_id, subject, body, is_broadcast, sent_at, 
+                             CASE WHEN is_broadcast = 1 THEN NULL ELSE recipient_id END
                     ORDER BY sent_at DESC
                 """)
             result = db.session.execute(query, {'user_id': session['user_id']})
@@ -3933,9 +3937,22 @@ def employee_messages():
                     drafts_query = drafts_query.filter(Message.deleted_at.is_(None))
                 drafts_count = drafts_query.count()
         
-        # Get all employees for compose modal (search) - convert to dict
+        # Get all employees AND admins for compose modal (search) - convert to dict
         employees = Employee.query.order_by(Employee.name).all()
         employees_data = [emp.to_dict() for emp in employees]
+        
+        # Also include admin users (HR staff) who might not be in Employee table
+        admin_users = User.query.filter_by(role='admin').all()
+        for admin in admin_users:
+            # Check if already in employees_data
+            if not any(emp['email'] == admin.username for emp in employees_data):
+                employees_data.append({
+                    'user_id': admin.user_id,
+                    'name': admin.username.split('@')[0].title() + ' (HR)',
+                    'email': admin.username,
+                    'department_name': 'Human Resources',
+                    'profile_image': None
+                })
         
         log_audit('VIEW', 'Messages', None, f'Employee viewed messages ({tab})')
         return render_template('employee_messages.html', 

@@ -916,7 +916,7 @@
     }
     
     function selectRecipient(emp) {
-        document.getElementById('recipientId').value = emp.user_id;
+        document.getElementById('recipient_id').value = emp.user_id;
         document.getElementById('recipientSearch').value = '';
         document.getElementById('searchResults').classList.remove('active');
         
@@ -937,7 +937,7 @@
     }
     
     function clearRecipient() {
-        document.getElementById('recipientId').value = '';
+        document.getElementById('recipient_id').value = '';
         const tag = document.getElementById('selectedTag');
         const avatar = document.getElementById('selectedAvatar');
         tag.style.display = 'none';

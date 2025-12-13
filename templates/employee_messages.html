@@ -685,8 +685,12 @@
             return;
         }
         
-        results.innerHTML = filtered.map(emp => `
-            <div class="search-result-item" onclick="selectRecipient(${emp.user_id}, '${emp.name}', '${emp.email}', '${emp.profile_image || ''}')">
+        results.innerHTML = filtered.map(emp => {
+            const escapedName = emp.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const escapedEmail = emp.email.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const photoPath = emp.profile_image || '';
+            return `
+            <div class="search-result-item" onclick='selectRecipient(${emp.user_id}, "${escapedName}", "${escapedEmail}", "${photoPath}")'>
                 ${emp.profile_image ? 
                     `<img src="/static/images/profiles/${emp.profile_image}" class="w-10 h-10 rounded-full object-cover" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold\\'>${emp.name[0].toUpperCase()}</div>'">` :
                     `<div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">${emp.name[0].toUpperCase()}</div>`
@@ -696,13 +700,14 @@
                     <div class="text-sm text-gray-500 dark:text-gray-400 truncate">${emp.email}${emp.department_name ? ' • ' + emp.department_name : ''}</div>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
         
         results.classList.add('active');
     }
     
     function selectRecipient(userId, name, email, photo) {
-        document.getElementById('recipientId').value = userId;
+        document.getElementById('recipient_id').value = userId;
         document.getElementById('recipientSearch').value = '';
         document.getElementById('searchResults').classList.remove('active');
         
@@ -729,7 +734,7 @@
     }
     
     function clearRecipient() {
-        document.getElementById('recipientId').value = '';
+        document.getElementById('recipient_id').value = '';
         document.getElementById('selectedRecipient').classList.remove('active');
         // Show search input again
         document.querySelector('.recipient-search').style.display = 'block';
@@ -745,7 +750,7 @@
     
     // Form validation
     document.getElementById('composeForm').addEventListener('submit', function(e) {
-        if (!document.getElementById('recipientId').value) {
+        if (!document.getElementById('recipient_id').value) {
             e.preventDefault();
             alert('Please select a recipient from the search results');
             return false;
@@ -754,7 +759,7 @@
     
     // Save draft function
     function saveDraft() {
-        const recipientId = document.getElementById('recipientId').value;
+        const recipientId = document.getElementById('recipient_id').value;
         const subject = document.querySelector('input[name="subject"]').value || '(No Subject)';
         const body = document.querySelector('textarea[name="body"]').value || '';
         
