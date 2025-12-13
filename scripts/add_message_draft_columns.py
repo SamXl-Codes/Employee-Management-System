@@ -21,43 +21,80 @@ def add_message_columns():
     
     try:
         with app.app_context():
-            # Check if columns already exist
-            check_query = text("""
-                SELECT COUNT(*) as count
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'messages' 
-                AND COLUMN_NAME IN ('is_draft', 'deleted_at')
-            """)
+            # Detect database type
+            db_name = db.engine.name
+            print(f"Detected database: {db_name}")
             
-            result = db.session.execute(check_query).fetchone()
-            existing_count = result[0]
+            # Check if columns already exist (database-agnostic)
+            if db_name == 'sqlite':
+                # For SQLite, check using PRAGMA table_info
+                check_query = text("PRAGMA table_info(messages)")
+                result = db.session.execute(check_query).fetchall()
+                existing_columns = [row[1] for row in result]
+                
+                if 'is_draft' in existing_columns and 'deleted_at' in existing_columns:
+                    print("✓ Columns already exist. No migration needed.")
+                    return
+                
+                # SQLite requires recreating the table to add columns with defaults
+                print("SQLite detected - using ALTER TABLE ADD COLUMN...")
+                
+                if 'is_draft' not in existing_columns:
+                    print("Adding is_draft column...")
+                    add_is_draft = text("""
+                        ALTER TABLE messages
+                        ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0
+                    """)
+                    db.session.execute(add_is_draft)
+                    print("✓ is_draft column added")
+                
+                if 'deleted_at' not in existing_columns:
+                    print("Adding deleted_at column...")
+                    add_deleted_at = text("""
+                        ALTER TABLE messages
+                        ADD COLUMN deleted_at DATETIME
+                    """)
+                    db.session.execute(add_deleted_at)
+                    print("✓ deleted_at column added")
             
-            if existing_count == 2:
-                print("✓ Columns already exist. No migration needed.")
-                return
-            
-            # Add is_draft column (boolean, default False)
-            print("Adding is_draft column...")
-            add_is_draft = text("""
-                ALTER TABLE messages
-                ADD is_draft BIT NOT NULL DEFAULT 0
-            """)
-            db.session.execute(add_is_draft)
-            print("✓ is_draft column added")
-            
-            # Add deleted_at column (datetime, nullable)
-            print("Adding deleted_at column...")
-            add_deleted_at = text("""
-                ALTER TABLE messages
-                ADD deleted_at DATETIME NULL
-            """)
-            db.session.execute(add_deleted_at)
-            print("✓ deleted_at column added")
+            else:
+                # For MS SQL Server
+                check_query = text("""
+                    SELECT COUNT(*) as count
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = 'messages' 
+                    AND COLUMN_NAME IN ('is_draft', 'deleted_at')
+                """)
+                
+                result = db.session.execute(check_query).fetchone()
+                existing_count = result[0]
+                
+                if existing_count == 2:
+                    print("✓ Columns already exist. No migration needed.")
+                    return
+                
+                # Add is_draft column (boolean, default False)
+                print("Adding is_draft column...")
+                add_is_draft = text("""
+                    ALTER TABLE messages
+                    ADD is_draft BIT NOT NULL DEFAULT 0
+                """)
+                db.session.execute(add_is_draft)
+                print("✓ is_draft column added")
+                
+                # Add deleted_at column (datetime, nullable)
+                print("Adding deleted_at column...")
+                add_deleted_at = text("""
+                    ALTER TABLE messages
+                    ADD deleted_at DATETIME NULL
+                """)
+                db.session.execute(add_deleted_at)
+                print("✓ deleted_at column added")
             
             # Commit changes
             db.session.commit()
             print("\n✓ Migration completed successfully!")
-            print("  - is_draft column added (BIT, default 0)")
+            print("  - is_draft column added (INTEGER/BIT, default 0)")
             print("  - deleted_at column added (DATETIME, nullable)")
             
     except Exception as e:
