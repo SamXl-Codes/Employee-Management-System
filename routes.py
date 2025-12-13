@@ -3550,6 +3550,7 @@ def admin_messages():
             class MessageProxy:
                 def __init__(self, row_data):
                     try:
+                        from datetime import datetime
                         self.message_id = row_data[0]
                         self.sender_id = row_data[1]
                         self.recipient_id = row_data[2]
@@ -3557,8 +3558,9 @@ def admin_messages():
                         self.body = row_data[4]
                         self.is_broadcast = bool(row_data[5])
                         self.is_read = bool(row_data[6])
-                        self.sent_at = row_data[7]
-                        self.read_at = row_data[8]
+                        # Convert string dates to datetime objects (SQLite stores as strings)
+                        self.sent_at = datetime.fromisoformat(row_data[7]) if row_data[7] else None
+                        self.read_at = datetime.fromisoformat(row_data[8]) if row_data[8] else None
                         # Load relationships with error handling
                         try:
                             self.sender = User.query.get(self.sender_id) if self.sender_id else None
@@ -3740,6 +3742,7 @@ def employee_messages():
             class MessageProxy:
                 def __init__(self, row_data):
                     try:
+                        from datetime import datetime
                         self.message_id = row_data[0]
                         self.sender_id = row_data[1]
                         self.recipient_id = row_data[2]
@@ -3747,8 +3750,9 @@ def employee_messages():
                         self.body = row_data[4]
                         self.is_broadcast = bool(row_data[5])
                         self.is_read = bool(row_data[6])
-                        self.sent_at = row_data[7]
-                        self.read_at = row_data[8]
+                        # Convert string dates to datetime objects (SQLite stores as strings)
+                        self.sent_at = datetime.fromisoformat(row_data[7]) if row_data[7] else None
+                        self.read_at = datetime.fromisoformat(row_data[8]) if row_data[8] else None
                         # Load relationships with error handling
                         try:
                             self.sender = User.query.get(self.sender_id) if self.sender_id else None
