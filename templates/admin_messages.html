@@ -585,12 +585,28 @@
                 </svg>
                 New Message
             </button>
+            
+            <!-- Tabs -->
+            <div style="display: flex; gap: 8px; margin-top: 16px; border-bottom: 2px solid #e5e7eb;">
+                <a href="{{ url_for('admin_messages', tab='sent') }}" 
+                   class="{% if current_tab == 'sent' or not current_tab %}active{% endif %}"
+                   style="flex: 1; text-align: center; padding: 10px; font-weight: 500; border-bottom: 2px solid {% if current_tab == 'sent' or not current_tab %}#2563eb{% else %}transparent{% endif %}; color: {% if current_tab == 'sent' or not current_tab %}#2563eb{% else %}#6b7280{% endif %}; margin-bottom: -2px; transition: all 0.2s;">
+                    Sent
+                </a>
+                <a href="{{ url_for('admin_messages', tab='drafts') }}" 
+                   class="{% if current_tab == 'drafts' %}active{% endif %}"
+                   style="flex: 1; text-align: center; padding: 10px; font-weight: 500; border-bottom: 2px solid {% if current_tab == 'drafts' %}#2563eb{% else %}transparent{% endif %}; color: {% if current_tab == 'drafts' %}#2563eb{% else %}#6b7280{% endif %}; margin-bottom: -2px; transition: all 0.2s;">
+                    Drafts {% if drafts_count > 0 %}<span style="background: #fbbf24; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 4px;">{{ drafts_count }}</span>{% endif %}
+                </a>
+            </div>
         </div>
         
         <div class="messages-list">
             {% if messages %}
                 {% for message in messages %}
-                <div class="message-list-item" onclick="window.location.href='{{ url_for('admin_view_message', message_id=message.message_id) }}'" style="cursor: pointer;">
+                <div class="message-list-item group" style="position: relative; display: flex; align-items: center; gap: 12px;">
+                    <div style="flex: 1; cursor: pointer;" onclick="window.location.href='{{ url_for('admin_view_message', message_id=message.message_id) }}'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
                     <!-- Avatar -->
                     {% if message.is_broadcast %}
                         <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;border:2px solid #e5e7eb;">
@@ -635,6 +651,29 @@
                         </div>
                         <div class="message-subject-preview">{{ message.subject }}</div>
                     </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons (appear on hover) -->
+                    <div style="display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s;" class="group-hover:opacity-100">
+                        {% if current_tab == 'drafts' %}
+                            <form method="POST" action="{{ url_for('send_draft', draft_id=message.message_id) }}" style="display: inline;" onsubmit="return confirm('Send this draft message?');">
+                                <button type="submit" style="padding: 8px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer;" title="Send Draft" onclick="event.stopPropagation();">
+                                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    </svg>
+                                </button>
+                            </form>
+                        {% endif %}
+                        
+                        <form method="POST" action="{{ url_for('delete_message', message_id=message.message_id) }}" style="display: inline;" onsubmit="return confirm('Delete this message? This action cannot be undone.');">
+                            <button type="submit" style="padding: 8px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;" title="Delete Message" onclick="event.stopPropagation();">
+                                <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
                 </div>
                 {% endfor %}
             {% endif %}
@@ -644,8 +683,12 @@
     <!-- Main Content -->
     <div class="messages-content">
         <div class="messages-content-header">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Sent Messages</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">View all messages you've sent to employees</p>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {% if current_tab == 'drafts' %}Draft Messages{% else %}Sent Messages{% endif %}
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {% if current_tab == 'drafts' %}Manage your draft messages before sending{% else %}View all messages you've sent to employees{% endif %}
+            </p>
         </div>
         
         <div class="messages-content-body">
@@ -801,6 +844,9 @@
                 <button type="button" onclick="closeCompose()" class="px-6 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium">
                     Cancel
                 </button>
+                <button type="button" onclick="saveDraft()" class="px-6 py-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors font-medium">
+                    Save Draft
+                </button>
                 <button type="submit" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/30">
                     Send Message
                 </button>
@@ -909,6 +955,43 @@
             closeCompose();
         }
     });
+    
+    // Save draft function
+    function saveDraft() {
+        const messageType = document.getElementById('messageType').value;
+        const recipientId = document.getElementById('recipientId').value;
+        const subject = document.querySelector('input[name="subject"]').value || '(No Subject)';
+        const body = document.querySelector('textarea[name="body"]').value || '';
+        
+        if (messageType === 'specific' && !recipientId) {
+            alert('Please select a recipient before saving draft');
+            return;
+        }
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('message_type', messageType);
+        formData.append('recipient_id', messageType === 'broadcast' ? 'broadcast' : recipientId);
+        formData.append('subject', subject);
+        formData.append('body', body);
+        
+        // Submit via fetch
+        fetch('{{ url_for("save_draft") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '{{ url_for("admin_messages", tab="drafts") }}';
+            } else {
+                alert('Failed to save draft');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving draft');
+        });
+    }
     
     // Close on escape key
     document.addEventListener('keydown', function(e) {
