@@ -1055,6 +1055,51 @@ def admin_settings():
     return render_template('admin_settings_v6.html', user=user, stats=stats)
 
 
+@app.route('/admin/run-migration', methods=['POST'])
+@admin_required
+def run_migration():
+    """Run database migration to add draft and delete columns."""
+    from sqlalchemy import inspect, text
+    
+    try:
+        # Check current columns
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('messages')]
+        has_draft = 'is_draft' in columns
+        has_deleted = 'deleted_at' in columns
+        
+        if has_draft and has_deleted:
+            flash('Migration already completed! Draft and delete features are enabled.', 'info')
+            return redirect(url_for('admin_messages'))
+        
+        # Run migration
+        app.logger.info("Starting database migration for draft and delete columns...")
+        
+        if not has_draft:
+            app.logger.info("Adding is_draft column...")
+            # SQLite uses INTEGER for boolean
+            db.session.execute(text("ALTER TABLE messages ADD COLUMN is_draft INTEGER DEFAULT 0"))
+            app.logger.info("✓ Added is_draft column")
+        
+        if not has_deleted:
+            app.logger.info("Adding deleted_at column...")
+            db.session.execute(text("ALTER TABLE messages ADD COLUMN deleted_at TEXT"))
+            app.logger.info("✓ Added deleted_at column")
+        
+        db.session.commit()
+        
+        log_audit('UPDATE', 'Database', None, 'Migration completed: Added draft and delete columns')
+        flash('✅ Migration completed successfully! Draft and delete features are now enabled.', 'success')
+        app.logger.info("Migration completed successfully!")
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Migration failed: {str(e)}")
+        flash(f'❌ Migration failed: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_messages'))
+
+
 def generate_attendance_summary_report(start_date=None, end_date=None, department_id=None):
     """
     Generate attendance summary report with filters.
