@@ -3684,23 +3684,50 @@ def compose_message():
             return redirect(url_for('compose_message'))
         
         try:
+            from sqlalchemy import inspect, text
+            # Check if draft columns exist
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('messages')]
+            has_draft = 'is_draft' in columns
+            
             if message_type == 'broadcast':
                 # Send to all employees
                 employees = Employee.query.all()
                 sent_count = 0
-                for emp in employees:
-                    # Find user by matching email
-                    user = User.query.filter_by(username=emp.email).first()
-                    if user:
-                        message = Message(
-                            sender_id=session['user_id'],
-                            recipient_id=user.user_id,
-                            subject=subject,
-                            body=body,
-                            is_broadcast=True
-                        )
-                        db.session.add(message)
-                        sent_count += 1
+                
+                if not has_draft:
+                    # Use raw SQL for broadcast without draft columns
+                    for emp in employees:
+                        user = User.query.filter_by(username=emp.email).first()
+                        if user:
+                            query = text("""
+                                INSERT INTO messages (sender_id, recipient_id, subject, body, is_broadcast, is_read, sent_at)
+                                VALUES (:sender_id, :recipient_id, :subject, :body, :is_broadcast, :is_read, :sent_at)
+                            """)
+                            db.session.execute(query, {
+                                'sender_id': session['user_id'],
+                                'recipient_id': user.user_id,
+                                'subject': subject,
+                                'body': body,
+                                'is_broadcast': True,
+                                'is_read': False,
+                                'sent_at': datetime.utcnow().isoformat()
+                            })
+                            sent_count += 1
+                else:
+                    # Use ORM with draft columns
+                    for emp in employees:
+                        user = User.query.filter_by(username=emp.email).first()
+                        if user:
+                            message = Message(
+                                sender_id=session['user_id'],
+                                recipient_id=user.user_id,
+                                subject=subject,
+                                body=body,
+                                is_broadcast=True
+                            )
+                            db.session.add(message)
+                            sent_count += 1
                 
                 db.session.commit()
                 log_audit('CREATE', 'Message', None, f'Broadcast message: {subject}')
@@ -3712,17 +3739,35 @@ def compose_message():
                     flash('Please select a recipient', 'danger')
                     return redirect(url_for('compose_message'))
                 
-                message = Message(
-                    sender_id=session['user_id'],
-                    recipient_id=int(recipient_id),
-                    subject=subject,
-                    body=body,
-                    is_broadcast=False
-                )
-                db.session.add(message)
-                db.session.commit()
+                if not has_draft:
+                    # Use raw SQL without draft columns
+                    query = text("""
+                        INSERT INTO messages (sender_id, recipient_id, subject, body, is_broadcast, is_read, sent_at)
+                        VALUES (:sender_id, :recipient_id, :subject, :body, :is_broadcast, :is_read, :sent_at)
+                    """)
+                    db.session.execute(query, {
+                        'sender_id': session['user_id'],
+                        'recipient_id': int(recipient_id),
+                        'subject': subject,
+                        'body': body,
+                        'is_broadcast': False,
+                        'is_read': False,
+                        'sent_at': datetime.utcnow().isoformat()
+                    })
+                    db.session.commit()
+                else:
+                    # Use ORM with draft columns
+                    message = Message(
+                        sender_id=session['user_id'],
+                        recipient_id=int(recipient_id),
+                        subject=subject,
+                        body=body,
+                        is_broadcast=False
+                    )
+                    db.session.add(message)
+                    db.session.commit()
                 
-                log_audit('CREATE', 'Message', message.message_id, f'Message sent: {subject}')
+                log_audit('CREATE', 'Message', None, f'Message sent: {subject}')
                 flash('Message sent successfully', 'success')
             
             return redirect(url_for('admin_messages'))
@@ -4096,6 +4141,7 @@ def admin_view_message(message_id):
 def employee_send_message():
     """Employee send message to HR/Admin or reply to existing message."""
     from models import Message
+    from sqlalchemy import inspect, text
     
     recipient_id = request.form.get('recipient_id')
     subject = request.form.get('subject')
@@ -4106,17 +4152,41 @@ def employee_send_message():
         return redirect(url_for('employee_messages'))
     
     try:
-        message = Message(
-            sender_id=session['user_id'],
-            recipient_id=int(recipient_id),
-            subject=subject,
-            body=body,
-            is_broadcast=False
-        )
-        db.session.add(message)
-        db.session.commit()
+        # Check if draft columns exist
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('messages')]
+        has_draft = 'is_draft' in columns
         
-        log_audit('CREATE', 'Message', message.message_id, f'Employee sent message: {subject}')
+        if not has_draft:
+            # Use raw SQL to insert without draft columns
+            query = text("""
+                INSERT INTO messages (sender_id, recipient_id, subject, body, is_broadcast, is_read, sent_at)
+                VALUES (:sender_id, :recipient_id, :subject, :body, :is_broadcast, :is_read, :sent_at)
+            """)
+            result = db.session.execute(query, {
+                'sender_id': session['user_id'],
+                'recipient_id': int(recipient_id),
+                'subject': subject,
+                'body': body,
+                'is_broadcast': False,
+                'is_read': False,
+                'sent_at': datetime.utcnow().isoformat()
+            })
+            db.session.commit()
+            log_audit('CREATE', 'Message', None, f'Employee sent message: {subject}')
+        else:
+            # Use ORM with draft columns
+            message = Message(
+                sender_id=session['user_id'],
+                recipient_id=int(recipient_id),
+                subject=subject,
+                body=body,
+                is_broadcast=False
+            )
+            db.session.add(message)
+            db.session.commit()
+            log_audit('CREATE', 'Message', message.message_id, f'Employee sent message: {subject}')
+        
         flash('Message sent successfully', 'success')
         
     except Exception as e:
