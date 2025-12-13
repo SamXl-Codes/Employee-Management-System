@@ -1894,42 +1894,42 @@ def employee_dashboard():
         
         # Calculate attendance rate (last 30 days)
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    today = datetime.utcnow().date()
-    
-    recent_attendance = Attendance.query.filter(
-        Attendance.employee_id == emp.employee_id,
-        Attendance.date >= thirty_days_ago
-    ).all()
-    
-    present_count = len([a for a in recent_attendance if a.status == 'Present'])
-    late_count = len([a for a in recent_attendance if a.status == 'Late'])
-    absent_count = len([a for a in recent_attendance if a.status == 'Absent'])
-    attendance_rate = round((present_count / len(recent_attendance) * 100), 1) if recent_attendance else 0
-    
-    # Get leave statistics
-    pending_leaves = LeaveRequest.query.filter_by(
-        employee_id=emp.employee_id,
-        status='Pending'
-    ).count()
-    
-    approved_leaves = LeaveRequest.query.filter_by(
-        employee_id=emp.employee_id,
-        status='Approved'
-    ).count()
-    
-    rejected_leaves = LeaveRequest.query.filter_by(
-        employee_id=emp.employee_id,
-        status='Rejected'
-    ).count()
-    
-    # Get recent leave requests (last 5)
-    recent_leaves = LeaveRequest.query.filter_by(
-        employee_id=emp.employee_id
-    ).order_by(LeaveRequest.submitted_at.desc()).limit(5).all()
-    
-    # Calculate days since joining
-    days_employed = (today - emp.date_joined).days if emp.date_joined else 0
-    years_employed = round(days_employed / 365.25, 1)
+        today = datetime.utcnow().date()
+        
+        recent_attendance = Attendance.query.filter(
+            Attendance.employee_id == emp.employee_id,
+            Attendance.date >= thirty_days_ago
+        ).all()
+        
+        present_count = len([a for a in recent_attendance if a.status == 'Present'])
+        late_count = len([a for a in recent_attendance if a.status == 'Late'])
+        absent_count = len([a for a in recent_attendance if a.status == 'Absent'])
+        attendance_rate = round((present_count / len(recent_attendance) * 100), 1) if recent_attendance else 0
+        
+        # Get leave statistics
+        pending_leaves = LeaveRequest.query.filter_by(
+            employee_id=emp.employee_id,
+            status='Pending'
+        ).count()
+        
+        approved_leaves = LeaveRequest.query.filter_by(
+            employee_id=emp.employee_id,
+            status='Approved'
+        ).count()
+        
+        rejected_leaves = LeaveRequest.query.filter_by(
+            employee_id=emp.employee_id,
+            status='Rejected'
+        ).count()
+        
+        # Get recent leave requests (last 5)
+        recent_leaves = LeaveRequest.query.filter_by(
+            employee_id=emp.employee_id
+        ).order_by(LeaveRequest.submitted_at.desc()).limit(5).all()
+        
+        # Calculate days since joining
+        days_employed = (today - emp.date_joined).days if emp.date_joined else 0
+        years_employed = round(days_employed / 365.25, 1)
     
         # Get today's attendance status
         today_attendance = Attendance.query.filter_by(
