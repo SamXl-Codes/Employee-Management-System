@@ -717,7 +717,14 @@
             itemDiv.dataset.name = emp.name;
             itemDiv.dataset.email = emp.email;
             itemDiv.dataset.photo = photoPath;
-            itemDiv.onclick = function() { selectRecipientFromElement(this); };
+            
+            // Use addEventListener to ensure handler persists
+            itemDiv.addEventListener('click', function() {
+                console.log('Employee search item clicked:', emp.name);
+                selectRecipientFromElement(this);
+            });
+            
+            console.log('Added item:', emp.name, 'userId:', emp.user_id);
             
             results.appendChild(itemDiv);
         });
@@ -734,16 +741,36 @@
     }
     
     function selectRecipient(userId, name, email, photo) {
-        document.getElementById('recipient_id').value = userId;
+        console.log('selectRecipient called:', {userId, name, email, photo});
+        
+        const recipientField = document.getElementById('recipient_id');
+        console.log('recipient_id field exists:', !!recipientField);
+        if (recipientField) {
+            recipientField.value = userId;
+            console.log('Set recipient_id to:', userId);
+        }
+        
         document.getElementById('recipientSearch').value = '';
         document.getElementById('searchResults').classList.remove('active');
         
         // Hide search input, show selected recipient
-        document.querySelector('.recipient-search').style.display = 'none';
+        const searchDiv = document.querySelector('.recipient-search');
+        if (searchDiv) searchDiv.style.display = 'none';
         
         const selectedDiv = document.getElementById('selectedRecipient');
         const selectedPhoto = document.getElementById('selectedPhoto');
         const selectedName = document.getElementById('selectedName');
+        
+        console.log('Elements found:', {
+            selectedDiv: !!selectedDiv, 
+            selectedPhoto: !!selectedPhoto, 
+            selectedName: !!selectedName
+        });
+        
+        if (!selectedDiv || !selectedPhoto || !selectedName) {
+            console.error('Missing required elements!');
+            return;
+        }
         
         if (photo) {
             selectedPhoto.src = `/static/images/profiles/${photo}`;
@@ -758,6 +785,7 @@
         
         selectedName.textContent = `${name} (${email})`;
         selectedDiv.classList.add('active');
+        console.log('Recipient selection complete. selectedDiv has active class:', selectedDiv.classList.contains('active'));
     }
     
     function clearRecipient() {

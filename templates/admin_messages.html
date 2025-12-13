@@ -927,7 +927,14 @@
             itemDiv.dataset.email = emp.email;
             itemDiv.dataset.photo = emp.profile_image || '';
             itemDiv.dataset.dept = emp.department_name || '';
-            itemDiv.onclick = function() { selectRecipientFromData(this); };
+            
+            // Use addEventListener instead of onclick to ensure it's not overwritten
+            itemDiv.addEventListener('click', function() {
+                console.log('Admin search item clicked:', emp.name);
+                selectRecipientFromData(this);
+            });
+            
+            console.log('Added item to results:', emp.name, 'onclick attached:', itemDiv.onclick !== null);
             
             results.appendChild(itemDiv);
         });

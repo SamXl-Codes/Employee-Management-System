@@ -44,6 +44,7 @@ def inject_unread_messages():
     """
     Context processor to inject unread message count into all templates.
     Makes unread_messages_count available globally for badge notifications.
+    Deduplicates broadcast messages so each shows as +1 instead of +16.
     """
     unread_count = 0
     if 'user_id' in session and session.get('role') == 'employee':
@@ -51,15 +52,28 @@ def inject_unread_messages():
             from sqlalchemy import text
             user_id = session['user_id']
             
-            # Use raw SQL to avoid column mapping issues
+            # Get all unread messages with broadcast info for deduplication
             query = text("""
-                SELECT COUNT(*) 
+                SELECT message_id, is_broadcast, subject, sender_id
                 FROM messages 
-                WHERE (recipient_id = :user_id OR is_broadcast = 1) 
+                WHERE recipient_id = :user_id
                 AND is_read = 0
             """)
             result = db.session.execute(query, {'user_id': user_id})
-            unread_count = result.scalar()
+            rows = result.fetchall()
+            
+            # Deduplicate broadcasts (show each broadcast as 1, not 16)
+            seen_broadcasts = set()
+            for row in rows:
+                is_broadcast = bool(row[1])
+                if is_broadcast:
+                    broadcast_key = (row[2], row[3])  # (subject, sender_id)
+                    if broadcast_key not in seen_broadcasts:
+                        seen_broadcasts.add(broadcast_key)
+                        unread_count += 1
+                else:
+                    unread_count += 1
+                    
         except Exception as e:
             app.logger.error(f"Error counting unread messages: {str(e)}")
             unread_count = 0
