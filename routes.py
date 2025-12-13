@@ -14,7 +14,7 @@ Demonstrates:
 
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, make_response
 from app import app, db
-from models import User, Department, Role, Employee, Attendance, LeaveRequest, AuditLog
+from models import User, Department, Role, Employee, Attendance, LeaveRequest, AuditLog, Message
 import repository as repo
 import utils
 from datetime import datetime, date, timedelta
@@ -38,6 +38,26 @@ import socket
 
 # Global storage for QR tokens (in production, use Redis or database)
 qr_tokens = {}
+
+@app.context_processor
+def inject_unread_messages():
+    """
+    Context processor to inject unread message count into all templates.
+    Makes unread_messages_count available globally for badge notifications.
+    """
+    unread_count = 0
+    if 'user_id' in session and session.get('role') == 'employee':
+        try:
+            # Count unread messages for this employee (both direct and broadcast)
+            user_id = session['user_id']
+            unread_count = Message.query.filter(
+                ((Message.recipient_id == user_id) | (Message.is_broadcast == True)),
+                Message.is_read == False
+            ).count()
+        except Exception as e:
+            app.logger.error(f"Error counting unread messages: {str(e)}")
+            unread_count = 0
+    return dict(unread_messages_count=unread_count)
 
 def get_local_ip():
     """Automatically detect the local network IP address."""
