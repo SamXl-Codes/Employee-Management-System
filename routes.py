@@ -3591,19 +3591,31 @@ def admin_messages():
                 """)
             else:  # sent messages
                 # Exclude draft messages from sent tab
-                # For broadcasts, only show one row per broadcast (group by subject and sent_at)
                 query = text("""
-                    SELECT MIN(message_id) as message_id, sender_id, 
-                           CASE WHEN is_broadcast = 1 THEN NULL ELSE recipient_id END as recipient_id,
-                           subject, body, is_broadcast, is_read, sent_at, read_at
+                    SELECT message_id, sender_id, recipient_id, subject, body, 
+                           is_broadcast, is_read, sent_at, read_at
                     FROM messages 
                     WHERE sender_id = :user_id AND subject NOT LIKE '[DRAFT]%'
-                    GROUP BY sender_id, subject, body, is_broadcast, sent_at, 
-                             CASE WHEN is_broadcast = 1 THEN NULL ELSE recipient_id END
                     ORDER BY sent_at DESC
                 """)
             result = db.session.execute(query, {'user_id': session['user_id']})
             rows = result.fetchall()
+            
+            # Deduplicate broadcast messages - only show one per broadcast
+            if tab != 'drafts':
+                seen_broadcasts = set()
+                unique_rows = []
+                for row in rows:
+                    is_broadcast = bool(row[5])
+                    if is_broadcast:
+                        # Create unique key for broadcast: subject + sent_at
+                        broadcast_key = (row[3], row[7])  # (subject, sent_at)
+                        if broadcast_key not in seen_broadcasts:
+                            seen_broadcasts.add(broadcast_key)
+                            unique_rows.append(row)
+                    else:
+                        unique_rows.append(row)
+                rows = unique_rows
             
             # Manually create Message-like objects from raw SQL results
             # Define proxy class once
