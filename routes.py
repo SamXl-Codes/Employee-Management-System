@@ -3549,24 +3549,37 @@ def admin_messages():
             # Define proxy class once
             class MessageProxy:
                 def __init__(self, row_data):
-                    self.message_id = row_data[0]
-                    self.sender_id = row_data[1]
-                    self.recipient_id = row_data[2]
-                    self.subject = row_data[3]
-                    self.body = row_data[4]
-                    self.is_broadcast = bool(row_data[5])
-                    self.is_read = bool(row_data[6])
-                    self.sent_at = row_data[7]
-                    self.read_at = row_data[8]
-                    # Load relationships
-                    self.sender = User.query.get(self.sender_id) if self.sender_id else None
-                    self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
-                    # Add employees attribute to User objects if they don't have it
-                    # This is needed by templates that check user.employees
-                    if self.sender and not hasattr(self.sender, 'employees'):
-                        self.sender.employees = []
-                    if self.recipient and not hasattr(self.recipient, 'employees'):
-                        self.recipient.employees = []
+                    try:
+                        self.message_id = row_data[0]
+                        self.sender_id = row_data[1]
+                        self.recipient_id = row_data[2]
+                        self.subject = row_data[3]
+                        self.body = row_data[4]
+                        self.is_broadcast = bool(row_data[5])
+                        self.is_read = bool(row_data[6])
+                        self.sent_at = row_data[7]
+                        self.read_at = row_data[8]
+                        # Load relationships with error handling
+                        try:
+                            self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                        except Exception as e:
+                            app.logger.error(f"Error loading sender {self.sender_id}: {e}")
+                            self.sender = None
+                        
+                        try:
+                            self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                        except Exception as e:
+                            app.logger.error(f"Error loading recipient {self.recipient_id}: {e}")
+                            self.recipient = None
+                        
+                        # Add employees attribute unconditionally (templates expect this)
+                        if self.sender:
+                            self.sender.employees = []
+                        if self.recipient:
+                            self.recipient.employees = []
+                    except Exception as e:
+                        app.logger.error(f"Error creating MessageProxy: {e}")
+                        raise
             
             messages = [MessageProxy(row) for row in rows]
             drafts_count = 0
@@ -3726,24 +3739,37 @@ def employee_messages():
             # Define proxy class once
             class MessageProxy:
                 def __init__(self, row_data):
-                    self.message_id = row_data[0]
-                    self.sender_id = row_data[1]
-                    self.recipient_id = row_data[2]
-                    self.subject = row_data[3]
-                    self.body = row_data[4]
-                    self.is_broadcast = bool(row_data[5])
-                    self.is_read = bool(row_data[6])
-                    self.sent_at = row_data[7]
-                    self.read_at = row_data[8]
-                    # Load relationships
-                    self.sender = User.query.get(self.sender_id) if self.sender_id else None
-                    self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
-                    # Add employees attribute to User objects if they don't have it
-                    # This is needed by templates that check user.employees
-                    if self.sender and not hasattr(self.sender, 'employees'):
-                        self.sender.employees = []
-                    if self.recipient and not hasattr(self.recipient, 'employees'):
-                        self.recipient.employees = []
+                    try:
+                        self.message_id = row_data[0]
+                        self.sender_id = row_data[1]
+                        self.recipient_id = row_data[2]
+                        self.subject = row_data[3]
+                        self.body = row_data[4]
+                        self.is_broadcast = bool(row_data[5])
+                        self.is_read = bool(row_data[6])
+                        self.sent_at = row_data[7]
+                        self.read_at = row_data[8]
+                        # Load relationships with error handling
+                        try:
+                            self.sender = User.query.get(self.sender_id) if self.sender_id else None
+                        except Exception as e:
+                            app.logger.error(f"Error loading sender {self.sender_id}: {e}")
+                            self.sender = None
+                        
+                        try:
+                            self.recipient = User.query.get(self.recipient_id) if self.recipient_id else None
+                        except Exception as e:
+                            app.logger.error(f"Error loading recipient {self.recipient_id}: {e}")
+                            self.recipient = None
+                        
+                        # Add employees attribute unconditionally (templates expect this)
+                        if self.sender:
+                            self.sender.employees = []
+                        if self.recipient:
+                            self.recipient.employees = []
+                    except Exception as e:
+                        app.logger.error(f"Error creating MessageProxy: {e}")
+                        raise
             
             messages = [MessageProxy(row) for row in rows]
             app.logger.info(f"Loaded {len(messages)} messages for tab={tab} using old schema")
@@ -3803,7 +3829,9 @@ def employee_messages():
                               employees=employees_data,
                               current_tab=tab)
     except Exception as e:
-        app.logger.error(f"Error in employee_messages: {str(e)}")
+        import traceback
+        app.logger.error(f"Error in employee_messages (tab={tab}): {str(e)}")
+        app.logger.error(f"Traceback: {traceback.format_exc()}")
         flash('Error loading messages. Please try again.', 'danger')
         return redirect(url_for('employee_dashboard'))
 
