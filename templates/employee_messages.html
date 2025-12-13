@@ -395,7 +395,11 @@
             {% if messages %}
                 {% for message in messages %}
                 <div class="message-item {% if not message.is_read and current_tab == 'inbox' %}unread{% endif %} group relative">
+                    {% if current_tab == 'drafts' %}
+                    <div class="flex-1 cursor-pointer" onclick="editDraft({{ message.message_id }}, '{{ message.subject|replace('[DRAFT] ', '')|replace(\"'\", \"\\'\") }}', {{ message.body|tojson }}, {{ message.recipient_id if message.recipient_id else 'null' }}, {{ 'true' if message.is_broadcast else 'false' }})">
+                    {% else %}
                     <div class="flex-1 cursor-pointer" onclick="window.location.href='{{ url_for('view_message', message_id=message.message_id) }}'">
+                    {% endif %}
                         <div class="flex gap-3">
                     <!-- Profile Photo -->
                     <div class="flex-shrink-0">
@@ -585,15 +589,57 @@
 <script>
     const employees = {{ employees|tojson }};
     
+    function editDraft(draftId, subject, body, recipientId, isBroadcast) {
+        // Open compose modal
+        document.getElementById('composeModal').classList.add('active');
+        
+        // Pre-fill form
+        document.getElementById('draft_id').value = draftId;
+        document.getElementById('subject').value = subject;
+        document.getElementById('body').value = body;
+        
+        // Set message type
+        const messageType = isBroadcast ? 'broadcast' : 'specific';
+        document.querySelector(`input[name="message_type"][value="${messageType}"]`).checked = true;
+        
+        // Show/hide recipient field based on message type
+        const recipientSection = document.getElementById('recipientSection');
+        if (isBroadcast) {
+            recipientSection.classList.add('hidden');
+        } else {
+            recipientSection.classList.remove('hidden');
+            if (recipientId) {
+                document.getElementById('recipient_id').value = recipientId;
+                // Find and display recipient name
+                const recipient = employees.find(e => e.user_id === recipientId);
+                if (recipient) {
+                    document.getElementById('selectedRecipient').innerHTML = `
+                        <div class="selected-recipient-tag">
+                            <span>${recipient.name} (${recipient.email})</span>
+                            <button type="button" onclick="clearRecipient()">×</button>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Update modal title
+        document.querySelector('#composeModal h3').textContent = 'Edit Draft';
+    }
+    
     function openCompose() {
         document.getElementById('composeModal').classList.add('active');
         document.getElementById('recipientSearch').focus();
+        // Reset form when opening fresh compose
+        document.getElementById('composeForm').reset();
+        document.querySelector('#composeModal h3').textContent = 'Compose Message';
     }
     
     function closeCompose() {
         document.getElementById('composeModal').classList.remove('active');
         document.getElementById('composeForm').reset();
         clearRecipient();
+        document.querySelector('#composeModal h3').textContent = 'Compose Message';
     }
     
     function searchRecipients(query) {
