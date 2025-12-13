@@ -3806,8 +3806,10 @@ def employee_messages():
         # Use raw SQL to avoid ORM column mapping issues with missing columns
         if not has_draft and not has_deleted:
             # Old schema - no draft or deleted columns
-            # Build a custom query that only selects existing columns
-            if tab == 'sent':
+            if tab == 'drafts':
+                # No drafts without the column - show empty
+                messages = []
+            elif tab == 'sent':
                 query = text("""
                     SELECT message_id, sender_id, recipient_id, subject, body, 
                            is_broadcast, is_read, sent_at, read_at
@@ -3815,7 +3817,7 @@ def employee_messages():
                     WHERE sender_id = :user_id 
                     ORDER BY sent_at DESC
                 """)
-            else:  # inbox (drafts tab won't work without the column)
+            else:  # inbox
                 query = text("""
                     SELECT message_id, sender_id, recipient_id, subject, body, 
                            is_broadcast, is_read, sent_at, read_at
@@ -3824,8 +3826,11 @@ def employee_messages():
                     ORDER BY sent_at DESC
                 """)
             
-            result = db.session.execute(query, {'user_id': session['user_id']})
-            rows = result.fetchall()
+            if tab != 'drafts':
+                result = db.session.execute(query, {'user_id': session['user_id']})
+                rows = result.fetchall()
+            else:
+                rows = []
             
             # Manually create Message-like objects from raw SQL results
             # Define proxy class once
@@ -4274,22 +4279,40 @@ def save_draft():
 @login_required
 def delete_message(message_id):
     """Soft delete a message (marks as deleted without removing from database)."""
-    from models import Message
+    from sqlalchemy import inspect, text
     
     try:
-        message = Message.query.get(message_id)
+        # Check if deleted_at column exists
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('messages')]
+        has_deleted = 'deleted_at' in columns
         
-        if not message:
-            flash('Message not found', 'danger')
-        elif message.sender_id != session['user_id'] and message.recipient_id != session['user_id']:
-            flash('You do not have permission to delete this message', 'danger')
-        else:
-            # Soft delete - mark as deleted instead of removing
-            message.deleted_at = datetime.utcnow()
+        if not has_deleted:
+            # Just hard delete if column doesn't exist
+            query = text("DELETE FROM messages WHERE message_id = :message_id AND (sender_id = :user_id OR recipient_id = :user_id)")
+            result = db.session.execute(query, {'message_id': message_id, 'user_id': session['user_id']})
             db.session.commit()
-            
-            log_audit('DELETE', 'Message', message_id, f'Message deleted: {message.subject}')
             flash('Message deleted successfully', 'success')
+        else:
+            # Use raw SQL to get message first
+            query = text("SELECT sender_id, recipient_id, subject FROM messages WHERE message_id = :message_id")
+            result = db.session.execute(query, {'message_id': message_id})
+            row = result.fetchone()
+            
+            if not row:
+                flash('Message not found', 'danger')
+            elif row[0] != session['user_id'] and row[1] != session['user_id']:
+                flash('You do not have permission to delete this message', 'danger')
+            else:
+                # Soft delete with raw SQL
+                update_query = text("UPDATE messages SET deleted_at = :deleted_at WHERE message_id = :message_id")
+                db.session.execute(update_query, {
+                    'deleted_at': datetime.utcnow().isoformat(),
+                    'message_id': message_id
+                })
+                db.session.commit()
+                log_audit('DELETE', 'Message', message_id, f'Message deleted: {row[2]}')
+                flash('Message deleted successfully', 'success')
     
     except Exception as e:
         db.session.rollback()
