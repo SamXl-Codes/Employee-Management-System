@@ -48,13 +48,21 @@ def inject_unread_messages():
     unread_count = 0
     if 'user_id' in session and session.get('role') == 'employee':
         try:
-            # Count unread messages for this employee (both direct and broadcast, not deleted)
+            from sqlalchemy import inspect
+            # Check if deleted_at column exists
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('messages')]
+            has_deleted = 'deleted_at' in columns
+            
+            # Count unread messages for this employee (both direct and broadcast)
             user_id = session['user_id']
-            unread_count = Message.query.filter(
+            query = Message.query.filter(
                 ((Message.recipient_id == user_id) | (Message.is_broadcast == True)),
-                Message.is_read == False,
-                Message.deleted_at.is_(None)
-            ).count()
+                Message.is_read == False
+            )
+            if has_deleted:
+                query = query.filter(Message.deleted_at.is_(None))
+            unread_count = query.count()
         except Exception as e:
             app.logger.error(f"Error counting unread messages: {str(e)}")
             unread_count = 0
@@ -3427,39 +3435,54 @@ def manage_shifts():
 def admin_messages():
     """Admin view all sent messages (broadcast and specific) with drafts."""
     from models import Message
+    from sqlalchemy import inspect
+    
     user = repo.get_user_by_id(session['user_id'])
+    
+    # Check if new columns exist
+    inspector = inspect(db.engine)
+    columns = [col['name'] for col in inspector.get_columns('messages')]
+    has_draft = 'is_draft' in columns
+    has_deleted = 'deleted_at' in columns
     
     # Get tab parameter (sent, drafts)
     tab = request.args.get('tab', 'sent')
     
-    if tab == 'drafts':
-        # Get draft messages only
-        messages = Message.query.filter_by(
-            sender_id=session['user_id'],
-            is_draft=True
-        ).filter(Message.deleted_at.is_(None))\
-         .order_by(Message.sent_at.desc()).all()
-    else:  # sent messages
-        # Get all sent messages (not drafts, not deleted)
-        messages = Message.query.filter_by(
-            sender_id=session['user_id'],
-            is_draft=False
-        ).filter(Message.deleted_at.is_(None))\
-         .order_by(Message.sent_at.desc()).all()
-    
-    # Count drafts
-    drafts_count = Message.query.filter_by(
-        sender_id=session['user_id'],
-        is_draft=True
-    ).filter(Message.deleted_at.is_(None)).count()
-    
-    # Get all employees for compose modal (search) - convert to dict
-    employees = Employee.query.order_by(Employee.name).all()
-    employees_data = [emp.to_dict() for emp in employees]
-    
-    log_audit('VIEW', 'Messages', None, f'Admin viewed messages ({tab})')
-    return render_template('admin_messages.html', user=user, messages=messages, 
-                         employees_data=employees_data, current_tab=tab, drafts_count=drafts_count)
+    try:
+        if tab == 'drafts' and has_draft:
+            # Get draft messages only
+            query = Message.query.filter_by(sender_id=session['user_id'], is_draft=True)
+            if has_deleted:
+                query = query.filter(Message.deleted_at.is_(None))
+            messages = query.order_by(Message.sent_at.desc()).all()
+        else:  # sent messages
+            # Get all sent messages
+            query = Message.query.filter_by(sender_id=session['user_id'])
+            if has_draft:
+                query = query.filter_by(is_draft=False)
+            if has_deleted:
+                query = query.filter(Message.deleted_at.is_(None))
+            messages = query.order_by(Message.sent_at.desc()).all()
+        
+        # Count drafts
+        drafts_count = 0
+        if has_draft:
+            drafts_query = Message.query.filter_by(sender_id=session['user_id'], is_draft=True)
+            if has_deleted:
+                drafts_query = drafts_query.filter(Message.deleted_at.is_(None))
+            drafts_count = drafts_query.count()
+        
+        # Get all employees for compose modal (search) - convert to dict
+        employees = Employee.query.order_by(Employee.name).all()
+        employees_data = [emp.to_dict() for emp in employees]
+        
+        log_audit('VIEW', 'Messages', None, f'Admin viewed messages ({tab})')
+        return render_template('admin_messages.html', user=user, messages=messages, 
+                             employees_data=employees_data, current_tab=tab, drafts_count=drafts_count)
+    except Exception as e:
+        app.logger.error(f"Error in admin_messages: {str(e)}")
+        flash('Error loading messages. Please try again.', 'danger')
+        return redirect(url_for('dashboard'))
 
 
 @app.route('/admin/messages/compose', methods=['GET', 'POST'])
@@ -3538,56 +3561,73 @@ def compose_message():
 def employee_messages():
     """Employee Gmail-style messaging interface (inbox, sent, drafts, compose)."""
     from models import Message
+    from sqlalchemy import inspect
+    
     user = repo.get_user_by_id(session['user_id'])
+    
+    # Check if new columns exist
+    inspector = inspect(db.engine)
+    columns = [col['name'] for col in inspector.get_columns('messages')]
+    has_draft = 'is_draft' in columns
+    has_deleted = 'deleted_at' in columns
     
     # Get tab parameter (inbox, sent, or drafts)
     tab = request.args.get('tab', 'inbox')
     
-    if tab == 'sent':
-        # Get messages sent by this employee (not drafts, not deleted)
-        messages = Message.query.filter_by(
-            sender_id=session['user_id'],
-            is_draft=False
-        ).filter(Message.deleted_at.is_(None))\
-         .order_by(Message.sent_at.desc()).all()
-    elif tab == 'drafts':
-        # Get draft messages only
-        messages = Message.query.filter_by(
-            sender_id=session['user_id'],
-            is_draft=True
-        ).filter(Message.deleted_at.is_(None))\
-         .order_by(Message.sent_at.desc()).all()
-    else:  # inbox
-        # Get messages received by this employee (not deleted)
-        messages = Message.query.filter_by(
-            recipient_id=session['user_id']
-        ).filter(Message.deleted_at.is_(None))\
-         .order_by(Message.sent_at.desc()).all()
-    
-    # Count unread messages (not deleted)
-    unread_count = Message.query.filter_by(
-        recipient_id=session['user_id'], 
-        is_read=False
-    ).filter(Message.deleted_at.is_(None)).count()
-    
-    # Count drafts
-    drafts_count = Message.query.filter_by(
-        sender_id=session['user_id'],
-        is_draft=True
-    ).filter(Message.deleted_at.is_(None)).count()
-    
-    # Get all employees for compose modal (search) - convert to dict
-    employees = Employee.query.order_by(Employee.name).all()
-    employees_data = [emp.to_dict() for emp in employees]
-    
-    log_audit('VIEW', 'Messages', None, f'Employee viewed messages ({tab})')
-    return render_template('employee_messages.html', 
-                          user=user, 
-                          messages=messages, 
-                          unread_count=unread_count,
-                          drafts_count=drafts_count,
-                          employees=employees_data,
-                          current_tab=tab)
+    try:
+        if tab == 'sent':
+            # Get messages sent by this employee
+            query = Message.query.filter_by(sender_id=session['user_id'])
+            if has_draft:
+                query = query.filter_by(is_draft=False)
+            if has_deleted:
+                query = query.filter(Message.deleted_at.is_(None))
+            messages = query.order_by(Message.sent_at.desc()).all()
+            
+        elif tab == 'drafts' and has_draft:
+            # Get draft messages only
+            query = Message.query.filter_by(sender_id=session['user_id'], is_draft=True)
+            if has_deleted:
+                query = query.filter(Message.deleted_at.is_(None))
+            messages = query.order_by(Message.sent_at.desc()).all()
+            
+        else:  # inbox
+            # Get messages received by this employee
+            query = Message.query.filter_by(recipient_id=session['user_id'])
+            if has_deleted:
+                query = query.filter(Message.deleted_at.is_(None))
+            messages = query.order_by(Message.sent_at.desc()).all()
+        
+        # Count unread messages
+        unread_query = Message.query.filter_by(recipient_id=session['user_id'], is_read=False)
+        if has_deleted:
+            unread_query = unread_query.filter(Message.deleted_at.is_(None))
+        unread_count = unread_query.count()
+        
+        # Count drafts
+        drafts_count = 0
+        if has_draft:
+            drafts_query = Message.query.filter_by(sender_id=session['user_id'], is_draft=True)
+            if has_deleted:
+                drafts_query = drafts_query.filter(Message.deleted_at.is_(None))
+            drafts_count = drafts_query.count()
+        
+        # Get all employees for compose modal (search) - convert to dict
+        employees = Employee.query.order_by(Employee.name).all()
+        employees_data = [emp.to_dict() for emp in employees]
+        
+        log_audit('VIEW', 'Messages', None, f'Employee viewed messages ({tab})')
+        return render_template('employee_messages.html', 
+                              user=user, 
+                              messages=messages, 
+                              unread_count=unread_count,
+                              drafts_count=drafts_count,
+                              employees=employees_data,
+                              current_tab=tab)
+    except Exception as e:
+        app.logger.error(f"Error in employee_messages: {str(e)}")
+        flash('Error loading messages. Please try again.', 'danger')
+        return redirect(url_for('employee_dashboard'))
 
 
 @app.route('/employee/messages/<int:message_id>')
