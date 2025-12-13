@@ -4406,7 +4406,7 @@ def save_draft():
         db.session.rollback()
         flash(f'Error saving draft: {str(e)}', 'danger')
     
-    return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+    return redirect(url_for('admin_messages' if session.get('role') == 'admin' else 'employee_messages'))
 
 
 @app.route('/messages/delete/<int:message_id>', methods=['POST'])

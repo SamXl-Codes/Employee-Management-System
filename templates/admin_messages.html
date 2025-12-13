@@ -971,6 +971,13 @@
         }
         recipientField.value = emp.user_id;
         console.log('Set recipientId to:', emp.user_id);
+        
+        // Hide the search wrapper
+        const searchWrapper = document.querySelector('.recipient-search-wrapper');
+        if (searchWrapper) {
+            searchWrapper.style.display = 'none';
+        }
+        
         document.getElementById('recipientSearch').value = '';
         document.getElementById('searchResults').classList.remove('active');
         
@@ -996,6 +1003,12 @@
         const avatar = document.getElementById('selectedAvatar');
         tag.style.display = 'none';
         avatar.outerHTML = '<div id="selectedAvatar" class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold" style="flex-shrink: 0;"></div>';
+        
+        // Show the search wrapper again
+        const searchWrapper = document.querySelector('.recipient-search-wrapper');
+        if (searchWrapper) {
+            searchWrapper.style.display = 'block';
+        }
     }
     
     function viewMessageDetail(index) {
