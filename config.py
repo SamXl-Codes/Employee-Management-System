@@ -80,7 +80,8 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file upload
     
     # Session configuration
-    SESSION_COOKIE_SECURE = True  # Only send cookies over HTTPS
+    # Railway uses HTTPS, but we need to be flexible for both HTTP and HTTPS
+    SESSION_COOKIE_SECURE = False  # Allow cookies over both HTTP and HTTPS
     SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to cookies
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
     
