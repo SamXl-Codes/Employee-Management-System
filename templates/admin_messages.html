@@ -695,7 +695,16 @@
         <div class="messages-content-body">
             {% if messages %}
                 {% for message in messages %}
-                <div class="message-card" data-message-index="{{ loop.index0 }}">
+                <div class="message-card" data-message-index="{{ loop.index0 }}"
+                     {% if current_tab == 'drafts' %}
+                     data-draft-id="{{ message.message_id }}"
+                     data-subject="{{ message.subject|replace('[DRAFT] ', '') }}"
+                     data-body="{{ message.body }}"
+                     data-recipient-id="{{ message.recipient_id if message.recipient_id else '' }}"
+                     data-is-broadcast="{{ message.is_broadcast }}"
+                     style="cursor: pointer;"
+                     onclick="editDraftFromCard(this)"
+                     {% endif %}>
                     <div class="message-card-header">
                         <!-- Avatar -->
                         {% if message.is_broadcast %}
@@ -864,6 +873,8 @@
     function openCompose() {
         document.getElementById('composeOverlay').classList.add('active');
         document.getElementById('recipientSearch').focus();
+        // Reset modal title for new compose
+        document.querySelector('.compose-dialog-header h3').textContent = 'New Message';
     }
     
     function closeCompose() {
@@ -871,6 +882,8 @@
         document.getElementById('composeForm').reset();
         clearRecipient();
         setMessageType('specific');
+        // Reset modal title
+        document.querySelector('.compose-dialog-header h3').textContent = 'New Message';
     }
     
     function setMessageType(type) {
@@ -1014,6 +1027,44 @@
     function viewMessageDetail(index) {
         const cards = document.querySelectorAll('.message-card');
         cards[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    function editDraftFromCard(card) {
+        const draftId = card.dataset.draftId;
+        const subject = card.dataset.subject;
+        const body = card.dataset.body;
+        const recipientId = card.dataset.recipientId;
+        const isBroadcast = card.dataset.isBroadcast === 'True';
+        
+        console.log('Editing draft:', {draftId, subject, body, recipientId, isBroadcast});
+        
+        // Open compose modal
+        document.getElementById('composeOverlay').classList.add('active');
+        
+        // Set message type
+        if (isBroadcast) {
+            setMessageType('broadcast');
+        } else {
+            setMessageType('specific');
+            
+            // Set recipient if exists
+            if (recipientId && recipientId !== '') {
+                const recipient = employees.find(e => e.user_id == recipientId);
+                if (recipient) {
+                    selectRecipient(recipient);
+                }
+            }
+        }
+        
+        // Pre-fill form fields
+        document.getElementById('subject').value = subject || '';
+        document.getElementById('body').value = body || '';
+        
+        // Store draft ID for updating
+        // You may want to add a hidden field for draft_id if needed for saving
+        
+        // Update modal title
+        document.querySelector('.compose-dialog-header h3').textContent = 'Edit Draft';
     }
     
     // Close overlay on click outside
