@@ -3805,16 +3805,15 @@ def admin_send_message():
                 # Delete the old draft if this was from editing a draft
                 if draft_id:
                     try:
-                        draft_to_delete = Message.query.filter_by(
-                            message_id=int(draft_id),
-                            sender_id=session['user_id'],
-                            is_draft=True
-                        ).first()
-                        if draft_to_delete:
-                            db.session.delete(draft_to_delete)
-                            db.session.commit()
-                    except:
-                        pass  # Ignore if draft doesn't exist
+                        delete_query = text("DELETE FROM messages WHERE message_id = :message_id AND sender_id = :sender_id")
+                        db.session.execute(delete_query, {
+                            'message_id': int(draft_id),
+                            'sender_id': session['user_id']
+                        })
+                        db.session.commit()
+                    except Exception as del_err:
+                        print(f'Draft deletion error: {del_err}')
+                        pass
                 
             else:  # specific employee
                 recipient_id = request.form.get('recipient_id')
@@ -3854,18 +3853,17 @@ def admin_send_message():
                 flash('Message sent successfully', 'success')
                 
                 # Delete the old draft if this was from editing a draft
-                if draft_id and has_draft:
+                if draft_id:
                     try:
-                        draft_to_delete = Message.query.filter_by(
-                            message_id=int(draft_id),
-                            sender_id=session['user_id'],
-                            is_draft=True
-                        ).first()
-                        if draft_to_delete:
-                            db.session.delete(draft_to_delete)
-                            db.session.commit()
-                    except:
-                        pass  # Ignore if draft doesn't exist
+                        delete_query = text("DELETE FROM messages WHERE message_id = :message_id AND sender_id = :sender_id")
+                        db.session.execute(delete_query, {
+                            'message_id': int(draft_id),
+                            'sender_id': session['user_id']
+                        })
+                        db.session.commit()
+                    except Exception as del_err:
+                        print(f'Draft deletion error: {del_err}')
+                        pass
             
             return redirect(url_for('admin_messages'))
             
@@ -4337,17 +4335,16 @@ def employee_send_message():
             log_audit('CREATE', 'Message', message.message_id, f'Employee sent message: {subject}')
             
             # Delete the old draft if this was from editing a draft
-            if draft_id and has_draft:
+            if draft_id:
                 try:
-                    draft_to_delete = Message.query.filter_by(
-                        message_id=int(draft_id),
-                        sender_id=session['user_id'],
-                        is_draft=True
-                    ).first()
-                    if draft_to_delete:
-                        db.session.delete(draft_to_delete)
-                        db.session.commit()
-                except:
+                    delete_query = text("DELETE FROM messages WHERE message_id = :message_id AND sender_id = :sender_id")
+                    db.session.execute(delete_query, {
+                        'message_id': int(draft_id),
+                        'sender_id': session['user_id']
+                    })
+                    db.session.commit()
+                except Exception as del_err:
+                    print(f'Draft deletion error: {del_err}')
                     pass
         
         flash('Message sent successfully', 'success')
