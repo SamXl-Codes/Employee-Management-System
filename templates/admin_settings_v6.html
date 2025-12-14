@@ -335,8 +335,25 @@ function resetDatabase() {
 }
 
 function purgeInactiveUsers() {
-    if (confirm('⚠️ WARNING: This will permanently delete all inactive user accounts. This action cannot be undone!\n\nAre you absolutely sure?')) {
-        alert('Purge inactive users functionality - to be implemented');
+    if (confirm('⚠️ WARNING: This will permanently delete all inactive user accounts and their associated data. This action cannot be undone!\n\nAre you absolutely sure?')) {
+        fetch('{{ url_for("purge_inactive_users") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error purging inactive users: ' + error);
+        });
     }
 }
 </script>
