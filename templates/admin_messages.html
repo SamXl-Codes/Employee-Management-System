@@ -1057,8 +1057,8 @@
         }
         
         // Pre-fill form fields
-        document.getElementById('subject').value = subject || '';
-        document.getElementById('body').value = body || '';
+        document.querySelector('[name="subject"]').value = subject || '';
+        document.querySelector('[name="body"]').value = body || '';
         
         // Store draft ID for updating
         // You may want to add a hidden field for draft_id if needed for saving
