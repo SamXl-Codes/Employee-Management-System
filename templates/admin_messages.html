@@ -822,6 +822,7 @@
                         </button>
                     </div>
                     <input type="hidden" name="message_type" id="messageType" value="specific">
+                    <input type="hidden" name="draft_id" id="draftId" value="">
                 </div>
                 
                 <!-- Recipient Selection -->
@@ -901,6 +902,8 @@
         document.getElementById('composeForm').reset();
         clearRecipient();
         setMessageType('specific');
+        // Clear draft ID
+        document.getElementById('draftId').value = '';
         // Reset modal title
         document.querySelector('.compose-dialog-header h3').textContent = 'New Message';
     }
@@ -1060,6 +1063,9 @@
         // Open compose modal
         document.getElementById('composeOverlay').classList.add('active');
         
+        // Set draft ID in hidden field
+        document.getElementById('draftId').value = draftId;
+        
         // Set message type
         if (isBroadcast) {
             setMessageType('broadcast');
@@ -1078,9 +1084,6 @@
         // Pre-fill form fields
         document.querySelector('[name="subject"]').value = subject || '';
         document.querySelector('[name="body"]').value = body || '';
-        
-        // Store draft ID for updating
-        // You may want to add a hidden field for draft_id if needed for saving
         
         // Update modal title
         document.querySelector('.compose-dialog-header h3').textContent = 'Edit Draft';

@@ -3746,6 +3746,7 @@ def admin_send_message():
         message_type = request.form.get('message_type')  # 'specific' or 'broadcast'
         subject = request.form.get('subject')
         body = request.form.get('body')
+        draft_id = request.form.get('draft_id')  # If editing an existing draft
         
         if not subject or not body:
             flash('Subject and message body are required', 'danger')
@@ -3801,6 +3802,20 @@ def admin_send_message():
                 log_audit('CREATE', 'Message', None, f'Broadcast message: {subject}')
                 flash(f'Broadcast message sent to {sent_count} employees', 'success')
                 
+                # Delete the old draft if this was from editing a draft
+                if draft_id:
+                    try:
+                        draft_to_delete = Message.query.filter_by(
+                            message_id=int(draft_id),
+                            sender_id=session['user_id'],
+                            is_draft=True
+                        ).first()
+                        if draft_to_delete:
+                            db.session.delete(draft_to_delete)
+                            db.session.commit()
+                    except:
+                        pass  # Ignore if draft doesn't exist
+                
             else:  # specific employee
                 recipient_id = request.form.get('recipient_id')
                 if not recipient_id:
@@ -3837,6 +3852,20 @@ def admin_send_message():
                 
                 log_audit('CREATE', 'Message', None, f'Message sent: {subject}')
                 flash('Message sent successfully', 'success')
+                
+                # Delete the old draft if this was from editing a draft
+                if draft_id and has_draft:
+                    try:
+                        draft_to_delete = Message.query.filter_by(
+                            message_id=int(draft_id),
+                            sender_id=session['user_id'],
+                            is_draft=True
+                        ).first()
+                        if draft_to_delete:
+                            db.session.delete(draft_to_delete)
+                            db.session.commit()
+                    except:
+                        pass  # Ignore if draft doesn't exist
             
             return redirect(url_for('admin_messages'))
             
