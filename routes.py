@@ -326,6 +326,12 @@ def login():
             session['username'] = user.username
             session['role'] = user.role
             
+            # Set employee_id for employees
+            if user.role == 'employee':
+                emp = Employee.query.filter_by(email=user.username).first()
+                if emp:
+                    session['employee_id'] = emp.employee_id
+            
             flash(f'Welcome back, {user.username}!', 'success')
             
             # Check if user was trying to check in via QR code
@@ -894,11 +900,15 @@ def leave_requests():
     if session.get('role') == 'admin':
         leave_list = repo.get_all_leave_requests(status=status_filter)
     else:
-        # Employee view - would need additional repo function
-        leave_list = []
+        # Employee view - get their own leave requests
+        employee_id = session.get('employee_id')
+        if employee_id:
+            leave_list = repo.get_leave_requests_by_employee(employee_id, status=status_filter)
+        else:
+            leave_list = []
     
     return render_template('leave_requests.html',
-                         leaves=leave_list,
+                         leave_requests=leave_list,
                          status_filter=status_filter,
                          user_role=session.get('role'))
 
@@ -1112,6 +1122,73 @@ def run_migration():
         flash(f'❌ Migration failed: {str(e)}', 'danger')
     
     return redirect(url_for('admin_messages'))
+
+
+@app.route('/admin/purge-inactive-users', methods=['POST'])
+@admin_required
+def purge_inactive_users():
+    """Permanently delete all inactive users and their associated data."""
+    try:
+        # Find all inactive employees
+        inactive_employees = Employee.query.filter_by(status='inactive').all()
+        total_count = len(inactive_employees)
+        
+        if total_count == 0:
+            return jsonify({'success': True, 'message': 'No inactive users found to purge.'}), 200
+        
+        deleted_employees = []
+        skipped_employees = []
+        
+        # Delete each inactive employee and their associated user account
+        for emp in inactive_employees:
+            emp_name = emp.name
+            emp_email = emp.email
+            
+            # Check if employee has payroll records (financial history that should be preserved)
+            payroll_count = emp.payroll_records.count()
+            if payroll_count > 0:
+                skipped_employees.append(f"{emp_name} ({payroll_count} payroll records)")
+                continue
+            
+            # Find associated user account
+            user = User.query.filter_by(username=emp.email).first()
+            
+            # Delete employee (cascade should handle relationships)
+            db.session.delete(emp)
+            
+            # Delete user account if exists
+            if user:
+                db.session.delete(user)
+            
+            deleted_employees.append(f"{emp_name} ({emp_email})")
+        
+        db.session.commit()
+        
+        deleted_count = len(deleted_employees)
+        skipped_count = len(skipped_employees)
+        
+        if deleted_count > 0:
+            log_audit('DELETE', 'Employee', None, f'Purged {deleted_count} inactive user accounts: {", ".join(deleted_employees[:5])}{"..." if deleted_count > 5 else ""}')
+        
+        message_parts = []
+        if deleted_count > 0:
+            message_parts.append(f'✅ Successfully purged {deleted_count} inactive user account{"s" if deleted_count != 1 else ""}')
+        if skipped_count > 0:
+            message_parts.append(f'⚠️ Skipped {skipped_count} employee{"s" if skipped_count != 1 else ""} with payroll history (financial records preserved)')
+        if deleted_count == 0 and skipped_count > 0:
+            message_parts = [f'⚠️ Cannot purge {skipped_count} inactive employee{"s" if skipped_count != 1 else ""} - they have payroll records. Delete payroll records first if you want to remove these employees.']
+        
+        return jsonify({
+            'success': True, 
+            'message': '. '.join(message_parts) if message_parts else 'No employees purged.'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error purging inactive users: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
 
 
 def generate_attendance_summary_report(start_date=None, end_date=None, department_id=None):
@@ -3104,6 +3181,46 @@ def mark_payroll_paid(payroll_id):
     )
     
     flash('Payroll marked as paid', 'success')
+    return redirect(url_for('payroll_dashboard'))
+
+
+@app.route('/payroll/delete/<int:payroll_id>', methods=['POST'])
+@login_required
+def delete_payroll_record(payroll_id):
+    """Delete a payroll record and its associated deductions."""
+    from models import Payroll
+    if session.get('role') != 'admin':
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        payroll = Payroll.query.get_or_404(payroll_id)
+        
+        # Store details for logging before deletion
+        employee_name = payroll.employee.name if payroll.employee else 'Unknown'
+        employee_id = payroll.employee_id
+        pay_period = f"{payroll.pay_period_start.strftime('%b %d, %Y')} - {payroll.pay_period_end.strftime('%b %d, %Y')}"
+        net_salary = float(payroll.net_salary)
+        
+        # Delete payroll (cascade will delete associated deductions)
+        db.session.delete(payroll)
+        db.session.commit()
+        
+        # Log the deletion
+        log_audit(
+            'DELETE',
+            'Payroll',
+            payroll_id,
+            f'Deleted payroll record for {employee_name} (ID: {employee_id}), Period: {pay_period}, Amount: €{net_salary:.2f}'
+        )
+        
+        flash(f'✅ Successfully deleted payroll record for {employee_name} ({pay_period})', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting payroll record {payroll_id}: {str(e)}")
+        flash(f'❌ Error deleting payroll record: {str(e)}', 'danger')
+    
     return redirect(url_for('payroll_dashboard'))
 
 

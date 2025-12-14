@@ -339,20 +339,29 @@ function purgeInactiveUsers() {
         fetch('{{ url_for("purge_inactive_users") }}', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || `HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
+                alert('✅ ' + data.message);
                 window.location.reload();
             } else {
-                alert('Error: ' + data.message);
+                alert('❌ Error: ' + (data.message || 'Unknown error occurred'));
             }
         })
         .catch(error => {
-            alert('Error purging inactive users: ' + error);
+            console.error('Purge error:', error);
+            alert('❌ Error purging inactive users: ' + error.message);
         });
     }
 }

@@ -78,7 +78,7 @@
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ emp.name }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ emp.email }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ emp.department.department_name if emp.department else 'N/A' }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-900">${{ "{:,.2f}".format(emp.salary) if emp.salary else '0.00' }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">€{{ "{:,.2f}".format(emp.salary) if emp.salary else '0.00' }}</td>
                         {% if user_role == 'admin' %}
                         <td class="px-4 py-3 text-sm">
                             <div class="flex gap-2">

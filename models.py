@@ -620,16 +620,23 @@ class Payroll(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    employee = db.relationship('Employee', backref='payroll_records')
+    employee = db.relationship('Employee', backref=db.backref('payroll_records', lazy='dynamic', passive_deletes=False))
     deductions = db.relationship('Deduction', backref='payroll', lazy='dynamic', cascade='all, delete-orphan')
     
-    def __init__(self, employee_id, pay_period_start, pay_period_end, gross_salary):
-        self.employee_id = employee_id
-        self.pay_period_start = pay_period_start
-        self.pay_period_end = pay_period_end
-        self.gross_salary = gross_salary
-        self.total_deductions = 0  # Initialize to 0 before calculating
-        self.calculate_net_salary()
+    def __init__(self, employee_id=None, pay_period_start=None, pay_period_end=None, gross_salary=None, **kwargs):
+        """Initialize Payroll record with explicit attribute assignment."""
+        if employee_id is not None:
+            self.employee_id = employee_id
+        if pay_period_start is not None:
+            self.pay_period_start = pay_period_start
+        if pay_period_end is not None:
+            self.pay_period_end = pay_period_end
+        if gross_salary is not None:
+            self.gross_salary = gross_salary
+        self.total_deductions = kwargs.get('total_deductions', 0)
+        # Only calculate if we have gross_salary
+        if gross_salary is not None:
+            self.calculate_net_salary()
     
     def calculate_net_salary(self):
         """Calculate net salary by subtracting deductions from gross salary."""

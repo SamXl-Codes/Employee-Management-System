@@ -4,6 +4,9 @@ import unittest
 import sys
 import os
 
+# Set testing environment variable BEFORE importing app
+os.environ['TESTING'] = '1'
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -35,6 +38,7 @@ class TestUserModel(unittest.TestCase):
     def tearDown(self):
         print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
@@ -112,6 +116,7 @@ class TestDepartmentModel(unittest.TestCase):
     def tearDown(self):
         print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
@@ -187,6 +192,7 @@ class TestEmployeeModel(unittest.TestCase):
     def tearDown(self):
         print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
@@ -352,6 +358,7 @@ class TestLeaveRequestModel(unittest.TestCase):
     def tearDown(self):
         print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     

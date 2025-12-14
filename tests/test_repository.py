@@ -17,6 +17,9 @@ import sys
 import os
 from datetime import date
 
+# Set testing environment variable BEFORE importing app
+os.environ['TESTING'] = '1'
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app import app, db
@@ -26,16 +29,33 @@ import repository as repo
 class TestUserRepository(unittest.TestCase):
     """Test user repository functions."""
     
-    def setUp(self):
-        """Set up test database."""
+    @classmethod
+    def setUpClass(cls):
+        """Set up test configuration."""
+        print("Setting up TestUserRepository class")
+        # Set config before any database operations
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['TESTING'] = True
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        return super().setUpClass()
+    
+    @classmethod
+    def tearDownClass(cls):
+        """Tear down test configuration."""
+        print("Tearing down TestUserRepository class")
+        return super().tearDownClass()
+    
+    def setUp(self):
+        """Set up test database."""
+        print("\nSet Up")
         with app.app_context():
             db.create_all()
     
     def tearDown(self):
         """Clean up test database."""
+        print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
@@ -79,19 +99,39 @@ class TestUserRepository(unittest.TestCase):
 class TestEmployeeRepository(unittest.TestCase):
     """Test employee repository functions."""
     
-    def setUp(self):
-        """Set up test database with dependencies."""
+    @classmethod
+    def setUpClass(cls):
+        """Set up test configuration."""
+        print("Setting up TestEmployeeRepository class")
+        # Set config before any database operations
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['TESTING'] = True
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        return super().setUpClass()
+    
+    @classmethod
+    def tearDownClass(cls):
+        """Tear down test configuration."""
+        print("Tearing down TestEmployeeRepository class")
+        return super().tearDownClass()
+    
+    def setUp(self):
+        """Set up test database with dependencies."""
+        print("\nSet Up")
         with app.app_context():
             db.create_all()
-            # Create required dependencies
-            self.dept_success, _, self.dept = repo.create_department('IT', 'IT Department')
-            self.role_success, _, self.role = repo.create_role('Developer', 'Software Developer')
+            # Create required dependencies and store their IDs
+            dept_success, _, dept = repo.create_department('IT', 'IT Department')
+            role_success, _, role = repo.create_role('Developer', 'Software Developer')
+            # Store IDs to avoid detached instance errors
+            self.dept_id = dept.department_id if dept else None
+            self.role_id = role.role_id if role else None
     
     def tearDown(self):
         """Clean up test database."""
+        print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
@@ -102,8 +142,8 @@ class TestEmployeeRepository(unittest.TestCase):
                 name='John Doe',
                 email='john@test.com',
                 phone='555-1234',
-                department_id=self.dept.department_id,
-                role_id=self.role.role_id,
+                department_id=self.dept_id,
+                role_id=self.role_id,
                 salary=75000.0,
                 date_joined=date(2024, 1, 15)
             )
@@ -116,10 +156,10 @@ class TestEmployeeRepository(unittest.TestCase):
     def test_create_employee_duplicate_email(self):
         """Test creating employee with duplicate email fails."""
         with app.app_context():
-            repo.create_employee('First', 'duplicate@test.com', '111', self.dept.department_id,
-                               self.role.role_id, 50000, date.today())
+            repo.create_employee('First', 'duplicate@test.com', '111', self.dept_id,
+                               self.role_id, 50000, date.today())
             success, message, _ = repo.create_employee('Second', 'duplicate@test.com', '222',
-                                                       self.dept.department_id, self.role.role_id,
+                                                       self.dept_id, self.role_id,
                                                        60000, date.today())
             
             self.assertFalse(success)
@@ -128,10 +168,10 @@ class TestEmployeeRepository(unittest.TestCase):
     def test_get_all_employees(self):
         """Test retrieving all employees."""
         with app.app_context():
-            repo.create_employee('Emp1', 'emp1@test.com', '111', self.dept.department_id,
-                               self.role.role_id, 50000, date.today())
-            repo.create_employee('Emp2', 'emp2@test.com', '222', self.dept.department_id,
-                               self.role.role_id, 60000, date.today())
+            repo.create_employee('Emp1', 'emp1@test.com', '111', self.dept_id,
+                               self.role_id, 50000, date.today())
+            repo.create_employee('Emp2', 'emp2@test.com', '222', self.dept_id,
+                               self.role_id, 60000, date.today())
             
             employees = repo.get_all_employees()
             self.assertEqual(len(employees), 2)
@@ -139,10 +179,10 @@ class TestEmployeeRepository(unittest.TestCase):
     def test_search_employees(self):
         """Test employee search functionality."""
         with app.app_context():
-            repo.create_employee('Alice Smith', 'alice@test.com', '111', self.dept.department_id,
-                               self.role.role_id, 70000, date.today())
-            repo.create_employee('Bob Johnson', 'bob@test.com', '222', self.dept.department_id,
-                               self.role.role_id, 60000, date.today())
+            repo.create_employee('Alice Smith', 'alice@test.com', '111', self.dept_id,
+                               self.role_id, 70000, date.today())
+            repo.create_employee('Bob Johnson', 'bob@test.com', '222', self.dept_id,
+                               self.role_id, 60000, date.today())
             
             results = repo.search_employees('Alice')
             self.assertEqual(len(results), 1)
@@ -152,7 +192,7 @@ class TestEmployeeRepository(unittest.TestCase):
         """Test updating employee information."""
         with app.app_context():
             _, _, emp = repo.create_employee('Original Name', 'original@test.com', '111',
-                                            self.dept.department_id, self.role.role_id,
+                                            self.dept_id, self.role_id,
                                             50000, date.today())
             
             success, message = repo.update_employee(emp.employee_id, name='Updated Name',
@@ -167,7 +207,7 @@ class TestEmployeeRepository(unittest.TestCase):
         """Test soft delete (deactivate) employee."""
         with app.app_context():
             _, _, emp = repo.create_employee('To Delete', 'delete@test.com', '999',
-                                            self.dept.department_id, self.role.role_id,
+                                            self.dept_id, self.role_id,
                                             50000, date.today())
             
             success, message = repo.delete_employee(emp.employee_id, soft_delete=True)
@@ -230,3 +270,4 @@ def run_repository_tests():
 if __name__ == '__main__':
     success = run_repository_tests()
     sys.exit(0 if success else 1)
+

@@ -31,7 +31,7 @@
                     <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">€{{ "%.2f"|format(total_paid) }}</h3>
                 </div>
                 <div class="bg-green-100 dark:bg-green-900 p-4 rounded-lg">
-                    <i class="fas fa-dollar-sign text-green-600 dark:text-green-400 text-2xl"></i>
+                    <i class="fas fa-euro-sign text-green-600 dark:text-green-400 text-2xl"></i>
                 </div>
             </div>
         </div>
@@ -63,36 +63,54 @@
 
     <!-- Payroll Table -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-        <div class="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-            <h2 class="text-xl font-semibold">All Payroll Records</h2>
+        <div class="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+                <h2 class="text-xl font-semibold">All Payroll Records</h2>
+                
+                <!-- Date Filter Section -->
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <select id="monthFilter" onchange="filterPayroll()" style="padding: 8px 12px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: white; font-size: 14px; cursor: pointer;">
+                        <option value="">All Months</option>
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    
+                    <select id="yearFilter" onchange="filterPayroll()" style="padding: 8px 12px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: white; font-size: 14px; cursor: pointer;">
+                        <option value="">All Years</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                    
+                    <button onclick="resetFilters()" style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500;">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
             
-            <!-- Filter Section -->
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <select id="monthFilter" onchange="filterPayroll()" style="padding: 8px 12px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: white; font-size: 14px; cursor: pointer;">
-                    <option value="">All Months</option>
-                    <option value="01">January</option>
-                    <option value="02">February</option>
-                    <option value="03">March</option>
-                    <option value="04">April</option>
-                    <option value="05">May</option>
-                    <option value="06">June</option>
-                    <option value="07">July</option>
-                    <option value="08">August</option>
-                    <option value="09">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
-                
-                <select id="yearFilter" onchange="filterPayroll()" style="padding: 8px 12px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: white; font-size: 14px; cursor: pointer;">
-                    <option value="">All Years</option>
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                </select>
-                
-                <button onclick="resetFilters()" style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500;">
-                    Clear
-                </button>
+            <!-- Employee Search Section -->
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px; position: relative;">
+                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                    <input type="text" 
+                           id="employeeSearch" 
+                           placeholder="Search by Employee Name, ID, or Email..." 
+                           oninput="filterPayroll()"
+                           style="width: 100%; padding: 8px 12px 8px 36px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: white; font-size: 14px;">
+                </div>
+                <div style="color: #e5e7eb; font-size: 14px; font-weight: 500;">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <span id="recordCount">{{ payrolls|length }}</span> records
+                </div>
             </div>
         </div>
         
@@ -112,11 +130,16 @@
                 </thead>
                 <tbody id="payrollTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {% for payroll in payrolls %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" data-year="{{ payroll.pay_period_start.strftime('%Y') }}" data-month="{{ payroll.pay_period_start.strftime('%m') }}">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" 
+                        data-year="{{ payroll.pay_period_start.strftime('%Y') }}" 
+                        data-month="{{ payroll.pay_period_start.strftime('%m') }}"
+                        data-employee-name="{{ payroll.employee.name|lower }}"
+                        data-employee-id="{{ payroll.employee_id }}"
+                        data-employee-email="{{ payroll.employee.email|lower }}">
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ loop.index }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900 dark:text-white">{{ payroll.employee.name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">WFX-{{ "%04d"|format(payroll.employee_id) }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">WFX-{{ "%04d"|format(payroll.employee_id) }} • {{ payroll.employee.email }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                             {{ payroll.pay_period_start.strftime('%b %d') }} - {{ payroll.pay_period_end.strftime('%b %d, %Y') }}
@@ -146,7 +169,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <div class="flex space-x-3">
+                            <div class="flex space-x-2">
                                 <a href="{{ url_for('view_payslip', payroll_id=payroll.payroll_id) }}" 
                                    class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium" 
                                    title="View Payslip">
@@ -162,6 +185,13 @@
                                     </button>
                                 </form>
                                 {% endif %}
+                                <form method="POST" action="{{ url_for('delete_payroll_record', payroll_id=payroll.payroll_id) }}" class="inline" onsubmit="return confirmDelete('{{ payroll.employee.name }}', '{{ payroll.pay_period_start.strftime('%b %d') }} - {{ payroll.pay_period_end.strftime('%b %d, %Y') }}', '{{ "%.2f"|format(payroll.net_salary) }}');">
+                                    <button type="submit" 
+                                            class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-medium" 
+                                            title="Delete Payroll Record">
+                                        <i class="fas fa-trash mr-1.5"></i> Delete
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -183,29 +213,53 @@
 function filterPayroll() {
     const monthFilter = document.getElementById('monthFilter').value;
     const yearFilter = document.getElementById('yearFilter').value;
+    const searchTerm = document.getElementById('employeeSearch').value.toLowerCase().trim();
     const rows = document.querySelectorAll('#payrollTableBody tr[data-year]');
     
     let visibleCount = 0;
     rows.forEach(row => {
         const rowMonth = row.getAttribute('data-month');
         const rowYear = row.getAttribute('data-year');
+        const employeeName = row.getAttribute('data-employee-name');
+        const employeeId = row.getAttribute('data-employee-id');
+        const employeeEmail = row.getAttribute('data-employee-email');
         
+        // Date filter matches
         const monthMatch = !monthFilter || rowMonth === monthFilter;
         const yearMatch = !yearFilter || rowYear === yearFilter;
         
-        if (monthMatch && yearMatch) {
+        // Search filter matches (search in name, ID, or email)
+        const searchMatch = !searchTerm || 
+                          employeeName.includes(searchTerm) || 
+                          employeeId.includes(searchTerm) ||
+                          employeeEmail.includes(searchTerm) ||
+                          ('wfx-' + employeeId).includes(searchTerm);
+        
+        if (monthMatch && yearMatch && searchMatch) {
             row.style.display = '';
             visibleCount++;
         } else {
             row.style.display = 'none';
         }
     });
+    
+    // Update record count
+    document.getElementById('recordCount').textContent = visibleCount;
 }
 
 function resetFilters() {
     document.getElementById('monthFilter').value = '';
     document.getElementById('yearFilter').value = '';
+    document.getElementById('employeeSearch').value = '';
     filterPayroll();
+}
+
+function confirmDelete(employeeName, period, amount) {
+    return confirm('⚠️ WARNING: Delete this payroll record?\n\n' +
+                   'Employee: ' + employeeName + '\n' +
+                   'Period: ' + period + '\n' +
+                   'Amount: €' + amount + '\n\n' +
+                   'This will also delete all associated deduction records. This action cannot be undone!');
 }
 </script>
 

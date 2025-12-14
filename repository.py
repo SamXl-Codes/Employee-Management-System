@@ -714,6 +714,28 @@ def get_leave_request_by_id(leave_id: int) -> Optional[LeaveRequest]:
         return None
 
 
+def get_leave_requests_by_employee(employee_id: int, status: str = None) -> List[LeaveRequest]:
+    """
+    Get leave requests for a specific employee.
+    
+    Args:
+        employee_id: Employee ID
+        status: Optional status filter ('Pending', 'Approved', 'Rejected')
+        
+    Returns:
+        List[LeaveRequest]: Leave requests for the employee
+    """
+    try:
+        query = LeaveRequest.query.filter_by(employee_id=employee_id)
+        
+        if status:
+            query = query.filter_by(status=status)
+        
+        return query.order_by(LeaveRequest.submitted_at.desc()).all()
+    except Exception:
+        return []
+
+
 def update_leave_status(leave_id: int, status: str, hr_notes: str = None) -> tuple:
     """
     Update leave request status (approve or reject) with optional HR notes.

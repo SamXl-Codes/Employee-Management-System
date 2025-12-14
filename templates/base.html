@@ -98,11 +98,8 @@
                         <a href="{{ url_for('my_attendance') }}" class="nav-link {% if request.endpoint and 'my_attendance' in request.endpoint %}active{% endif %} whitespace-nowrap">
                             Attendance
                         </a>
-                        <a href="{{ url_for('my_leave_history') }}" class="nav-link {% if request.endpoint and 'my_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
-                            Leave History
-                        </a>
-                        <a href="{{ url_for('add_leave_request') }}" class="nav-link {% if request.endpoint and 'add_leave' in request.endpoint %}active{% endif %} whitespace-nowrap">
-                            Request Leave
+                        <a href="{{ url_for('leave_requests') }}" class="nav-link {% if request.endpoint and ('leave_request' in request.endpoint) %}active{% endif %} whitespace-nowrap">
+                            Leave Requests
                         </a>
                         <a href="{{ url_for('my_salary') }}" class="nav-link {% if request.endpoint and ('my_salary' in request.endpoint or 'download_payslip' in request.endpoint) %}active{% endif %} whitespace-nowrap">
                             My Salary

@@ -51,6 +51,7 @@ def validate_phone(phone: str) -> bool:
     Validate phone number format.
     
     Accepts formats like: 1234567890, 123-456-7890, (123) 456-7890, +1-123-456-7890
+    Minimum 10 digits required (excluding formatting characters)
     
     Args:
         phone: Phone number to validate
@@ -61,9 +62,20 @@ def validate_phone(phone: str) -> bool:
     if not phone:
         return False
     
-    # Regex pattern for phone validation
-    # Accepts various common phone formats
-    phone_pattern = r'^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$'
+    # Remove all non-digit characters to count actual digits
+    digits_only = re.sub(r'\D', '', phone)
+    
+    # Must have at least 10 digits
+    if len(digits_only) < 10:
+        return False
+    
+    # Comprehensive regex pattern for phone validation
+    # Supports various formats:
+    # - International: +1-123-456-7890, +44 20 1234 5678
+    # - US format with parentheses: (123) 456-7890
+    # - Standard formats: 123-456-7890, 555.123.4567
+    # - Plain numbers: 1234567890
+    phone_pattern = r'^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$'
     
     return bool(re.match(phone_pattern, phone))
 

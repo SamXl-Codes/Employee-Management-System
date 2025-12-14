@@ -3,216 +3,163 @@
 {% block title %}Leave Request Details - WorkflowX{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <a href="{{ url_for('leave_requests') }}" class="btn btn-outline-secondary">
+<div class="container-fluid" style="max-width: 1600px; padding: 2rem;">
+    <!-- Header -->
+    <div class="mb-4">
+        <a href="{{ url_for('leave_requests') }}" class="btn btn-outline-secondary" style="padding: 0.6rem 1.5rem;">
             <i class="fas fa-arrow-left me-2"></i>Back to Leave Requests
         </a>
     </div>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Main Leave Request Card -->
-            <div class="card shadow mb-4">
-                <div class="card-header bg-white border-bottom">
-                    <h4 class="mb-0">Leave Request Details</h4>
-                </div>
-                <div class="card-body">
-                    <!-- Employee Info -->
-                    <div class="d-flex align-items-center mb-4">
-                        {% if leave.employee.photo_filename %}
-                            <img src="{{ url_for('static', filename='images/profiles/' + leave.employee.photo_filename) }}" 
+    <!-- Main Card with Gradient Header -->
+    <div class="card shadow-lg" style="border-radius: 16px; overflow: hidden; border: none;">
+        <!-- Gradient Header -->
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 2rem; color: white;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="me-3" style="width: 90px; height: 90px; border: 4px solid rgba(255,255,255,0.4); border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.25);">
+                        {% if leave.employee.profile_image %}
+                            <img src="{{ url_for('static', filename='images/profiles/' + leave.employee.profile_image) }}" 
                                  alt="{{ leave.employee.name }}" 
-                                 class="rounded-circle me-3"
-                                 style="width: 80px; height: 80px; object-fit: cover;">
+                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="d-flex align-items-center justify-content-center" 
+                                 style="width: 100%; height: 100%; font-size: 36px; font-weight: bold; display: none;">
+                                {{ leave.employee.name[0].upper() }}
+                            </div>
                         {% else %}
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-                                 style="width: 80px; height: 80px; font-size: 32px; font-weight: bold;">
+                            <div class="d-flex align-items-center justify-content-center"
+                                 style="width: 100%; height: 100%; font-size: 36px; font-weight: bold;">
                                 {{ leave.employee.name[0].upper() }}
                             </div>
                         {% endif %}
-                        <div>
-                            <h5 class="mb-1">{{ leave.employee.name }}</h5>
-                            <p class="text-muted mb-0">
-                                {{ leave.employee.email }}<br>
-                                {{ leave.employee.department.name if leave.employee.department else 'N/A' }} • 
-                                {{ leave.employee.role.title if leave.employee.role else 'N/A' }}
-                            </p>
-                        </div>
                     </div>
-
-                    <hr>
-
-                    <!-- Leave Details -->
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-6">
-                            <label class="text-muted small">Leave Type</label>
-                            <p class="fw-semibold mb-0">{{ leave.leave_type }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">Status</label>
-                            <p class="mb-0">
-                                <span class="badge 
-                                    {% if leave.status == 'Approved' %}bg-success
-                                    {% elif leave.status == 'Rejected' %}bg-danger
-                                    {% else %}bg-warning{% endif %} fs-6">
-                                    {{ leave.status }}
-                                </span>
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">Start Date</label>
-                            <p class="fw-semibold mb-0">
-                                <i class="fas fa-calendar me-2 text-primary"></i>
-                                {{ leave.start_date.strftime('%B %d, %Y') }}
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">End Date</label>
-                            <p class="fw-semibold mb-0">
-                                <i class="fas fa-calendar me-2 text-primary"></i>
-                                {{ leave.end_date.strftime('%B %d, %Y') }}
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">Duration</label>
-                            <p class="fw-semibold mb-0">
-                                <i class="fas fa-clock me-2 text-success"></i>
-                                {{ leave.calculate_days() }} day(s)
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">Submitted On</label>
-                            <p class="fw-semibold mb-0">
-                                <i class="fas fa-paper-plane me-2 text-info"></i>
-                                {{ leave.submitted_at.strftime('%B %d, %Y at %I:%M %p') if leave.submitted_at else 'N/A' }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Reason -->
-                    {% if leave.reason %}
-                    <div class="mb-4">
-                        <label class="text-muted small">Reason for Leave</label>
-                        <div class="border rounded p-3 bg-light">
-                            {{ leave.reason }}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- HR Notes -->
-                    {% if leave.hr_notes %}
-                    <div class="mb-4">
-                        <label class="text-muted small">
-                            <i class="fas fa-user-shield text-primary me-2"></i>HR Notes
-                        </label>
-                        <div class="border border-primary rounded p-3 bg-light">
-                            <div class="d-flex align-items-start">
-                                <i class="fas fa-quote-left text-primary me-2 mt-1"></i>
-                                <div style="white-space: pre-wrap;">{{ leave.hr_notes }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if leave.reviewed_at %}
-                    <div class="mb-4">
-                        <label class="text-muted small">Reviewed On</label>
-                        <p class="fw-semibold mb-0">
-                            <i class="fas fa-check-circle me-2 text-success"></i>
-                            {{ leave.reviewed_at.strftime('%B %d, %Y at %I:%M %p') }}
+                    <div>
+                        <h3 class="mb-1" style="font-weight: 600;">{{ leave.employee.name }}</h3>
+                        <p class="mb-0" style="opacity: 0.9;">{{ leave.employee.email }}</p>
+                        <p class="mb-0" style="opacity: 0.8; font-size: 0.9rem;">
+                            {{ leave.employee.department.name if leave.employee.department else 'N/A' }} • 
+                            {{ leave.employee.role.title if leave.employee.role else 'N/A' }}
                         </p>
                     </div>
-                    {% endif %}
+                </div>
+                <div class="text-end">
+                    <span class="badge fs-5 px-4 py-2" style="background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.4);">
+                        {% if leave.status == 'Approved' %}✓ Approved
+                        {% elif leave.status == 'Rejected' %}✗ Rejected
+                        {% else %}⏱ Pending{% endif %}
+                    </span>
                 </div>
             </div>
         </div>
 
-        <!-- Sidebar Actions -->
-        <div class="col-lg-4">
-            {% if leave.is_pending() %}
-            <div class="card shadow mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-tasks me-2"></i>Review Actions
-                    </h6>
+        <!-- Content -->
+        <div class="card-body" style="padding: 2.5rem;">
+            <!-- Leave Details Grid -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="p-3" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <label class="text-muted small d-block mb-1">Leave Type</label>
+                        <p class="fw-bold mb-0" style="font-size: 1.1rem;">{{ leave.leave_type }}</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <button type="button" class="btn btn-sm btn-primary w-100 mb-2" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#reviewModal">
-                        <i class="fas fa-edit me-2"></i>Review Leave Request
-                    </button>
-                    <p class="small text-muted mb-0 mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Click above to approve or reject this leave request with optional HR notes.
-                    </p>
+                <div class="col-md-3">
+                    <div class="p-3" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <label class="text-muted small d-block mb-1">Duration</label>
+                        <p class="fw-bold mb-0" style="font-size: 1.1rem;">{{ leave.calculate_days() }} day(s)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <label class="text-muted small d-block mb-1">Start Date</label>
+                        <p class="fw-bold mb-0" style="font-size: 1.1rem;">{{ leave.start_date.strftime('%b %d, %Y') }}</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <label class="text-muted small d-block mb-1">End Date</label>
+                        <p class="fw-bold mb-0" style="font-size: 1.1rem;">{{ leave.end_date.strftime('%b %d, %Y') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reason -->
+            {% if leave.reason %}
+            <div class="mb-4">
+                <label class="fw-semibold mb-2" style="font-size: 1.1rem; color: #333;">Reason for Leave</label>
+                <div class="p-4" style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    {{ leave.reason }}
                 </div>
             </div>
             {% endif %}
 
-            <!-- Employee History Card -->
-            <div class="card shadow">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-history me-2"></i>Employee Leave History
+            <!-- HR Notes Display -->
+            {% if leave.hr_notes %}
+            <div class="mb-4">
+                <label class="fw-semibold mb-2" style="font-size: 1.1rem; color: #333;">HR Notes</label>
+                <div class="p-4" style="background: #fff7ed; border-radius: 12px; border: 2px solid #fb923c; white-space: pre-wrap;">{{ leave.hr_notes }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Review Form (Only for Pending) -->
+            {% if leave.is_pending() %}
+            <div style="background: linear-gradient(135deg, #dbeafe 0%, #fff 100%); padding: 2.5rem; border-radius: 16px; border: 2px solid #1e40af; margin-top: 2rem;">
+                <form method="POST" action="{{ url_for('update_leave_request', leave_id=leave.leave_id) }}">
+                    <h4 class="mb-3" style="color: #1e40af; font-weight: 600;">Add Your Review Notes</h4>
+                    <div class="mb-4">
+                        <textarea class="form-control" 
+                                  id="hr_notes" 
+                                  name="hr_notes" 
+                                  style="width: 100%; 
+                                         height: 250px; 
+                                         font-size: 1.05rem; 
+                                         line-height: 1.6; 
+                                         padding: 1.25rem; 
+                                         border: 2px solid #e0e7ff; 
+                                         border-radius: 12px; 
+                                         resize: vertical;
+                                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
+                                  placeholder="Type your notes here... (Optional)"></textarea>
+                    </div>
+                    <input type="hidden" id="action" name="action" value="">
+                    <div class="d-flex justify-content-end gap-3">
+                        <a href="{{ url_for('leave_requests') }}" class="btn btn-secondary" style="padding: 0.75rem 2.5rem; font-size: 1.05rem;">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger" 
+                                onclick="document.getElementById('action').value='reject'"
+                                style="padding: 0.75rem 2.5rem; font-size: 1.05rem; font-weight: 600;">
+                            <i class="fas fa-times me-2"></i>Reject Leave
+                        </button>
+                        <button type="submit" class="btn btn-success" 
+                                onclick="document.getElementById('action').value='approve'"
+                                style="padding: 0.75rem 2.5rem; font-size: 1.05rem; font-weight: 600;">
+                            <i class="fas fa-check me-2"></i>Approve Leave
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Employee Info Card -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow" style="border-radius: 12px; border: none;">
+                <div class="card-body p-4">
+                    <h6 class="mb-3" style="color: #1e40af; font-weight: 600;">
+                        <i class="fas fa-history me-2"></i>Leave History
                     </h6>
-                </div>
-                <div class="card-body">
                     <div class="mb-3">
                         <label class="text-muted small">Total Leave Days (This Year)</label>
-                        <h4 class="mb-0">{{ leave.employee.get_total_leave_days() }} days</h4>
+                        <h4 class="mb-0" style="color: #1e40af;">{{ leave.employee.get_total_leave_days() }} days</h4>
                     </div>
-                    <a href="{{ url_for('employees') }}" class="btn btn-sm btn-outline-primary w-100">
+                    <a href="{{ url_for('edit_employee', employee_id=leave.employee_id) }}" class="btn btn-outline-primary w-100" style="border-radius: 8px;">
                         View Full Employee Profile
                     </a>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Review Modal -->
-<div class="modal fade" id="reviewModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{{ url_for('update_leave_request', leave_id=leave.leave_id) }}">
-                <div class="modal-header">
-                    <h5 class="modal-title">Review Leave Request</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <strong>Employee:</strong> {{ leave.employee.name }}<br>
-                        <strong>Type:</strong> {{ leave.leave_type }}<br>
-                        <strong>Duration:</strong> {{ leave.start_date.strftime('%Y-%m-%d') }} to {{ leave.end_date.strftime('%Y-%m-%d') }} ({{ leave.calculate_days() }} days)<br>
-                        <strong>Reason:</strong> {{ leave.reason or 'No reason provided' }}
-                    </div>
-                    <hr>
-                    <div class="mb-3">
-                        <label for="hr_notes" class="form-label">
-                            <strong>HR Notes</strong> <small class="text-muted">(Optional - will be visible to employee)</small>
-                        </label>
-                        <textarea class="form-control" 
-                                  id="hr_notes" 
-                                  name="hr_notes" 
-                                  rows="4" 
-                                  placeholder="Add notes about your decision (e.g., approved with conditions, rejection reason, etc.)"></textarea>
-                    </div>
-                    <input type="hidden" id="action" name="action" value="">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger" 
-                            onclick="document.getElementById('action').value='reject'">
-                        <i class="fas fa-times me-1"></i>Reject
-                    </button>
-                    <button type="submit" class="btn btn-success" 
-                            onclick="document.getElementById('action').value='approve'">
-                        <i class="fas fa-check me-1"></i>Approve
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
