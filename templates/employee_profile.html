@@ -58,7 +58,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Annual Salary</label>
-                    <p class="mt-2 text-gray-900">${{ "{:,.2f}".format(current_user.salary) if current_user.salary else 'N/A' }}</p>
+                    <p class="mt-2 text-gray-900">€{{ "{:,.2f}".format(current_user.salary) if current_user.salary else 'N/A' }}</p>
                 </div>
             </div>
             

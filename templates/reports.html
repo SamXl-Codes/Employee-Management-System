@@ -198,11 +198,11 @@
         <div class="px-6 py-4 bg-blue-50 grid grid-cols-1 md:grid-cols-2 gap-4" style="background: #eff6ff;">
             <div>
                 <p class="text-sm payroll-label" style="color: #6b7280;">Total Annual Payroll</p>
-                <p class="text-2xl font-bold payroll-value" style="color: #1f2937;">${{ "{:,.2f}".format(report_data.total_annual_payroll) }}</p>
+                <p class="text-2xl font-bold payroll-value" style="color: #1f2937;">€{{ "{:,.2f}".format(report_data.total_annual_payroll) }}</p>
             </div>
             <div>
                 <p class="text-sm payroll-label" style="color: #6b7280;">Total Monthly Payroll</p>
-                <p class="text-2xl font-bold payroll-value" style="color: #1f2937;">${{ "{:,.2f}".format(report_data.total_monthly_payroll) }}</p>
+                <p class="text-2xl font-bold payroll-value" style="color: #1f2937;">€{{ "{:,.2f}".format(report_data.total_monthly_payroll) }}</p>
             </div>
         </div>
         
@@ -224,8 +224,8 @@
                         <td class="font-medium text-gray-900">{{ row.employee.name }}</td>
                         <td>{{ row.employee.department.name if row.employee.department else 'N/A' }}</td>
                         <td>{{ row.employee.role.title if row.employee.role else 'N/A' }}</td>
-                        <td class="font-mono">${{ "{:,.2f}".format(row.annual_salary) }}</td>
-                        <td class="font-mono">${{ "{:,.2f}".format(row.monthly_salary) }}</td>
+                        <td class="font-mono">€{{ "{:,.2f}".format(row.annual_salary) }}</td>
+                        <td class="font-mono">€{{ "{:,.2f}".format(row.monthly_salary) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

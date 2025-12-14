@@ -1,20 +1,11 @@
-"""
-Unit Tests for Database Models
-
-Tests all model classes including:
-- User model and authentication
-- Employee model and business logic
-- Department and Role models
-- Attendance and LeaveRequest models
-- AuditLog model
-
-Week 3 Concept: Unit testing with unittest framework
-Week 9 Concept: OOP testing - testing classes and methods
-"""
+# Unit tests to test database models
 
 import unittest
 import sys
 import os
+
+# Set testing environment variable BEFORE importing app
+os.environ['TESTING'] = '1'
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -25,39 +16,34 @@ from datetime import date, datetime, timedelta
 
 
 class TestUserModel(unittest.TestCase):
-    """
-    Test User model functionality.
-    
-    Week 3 Concept: Test classes inheriting from unittest.TestCase
-    Week 9 Concept: Testing authentication and security features
-    """
-    
     @classmethod
     def setUpClass(cls):
-        """Set up test database before all tests."""
+        print("Setting up TestUserModel class")
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['TESTING'] = True
         cls.app = app
         cls.client = app.test_client()
+        return super().setUpClass()
+    
+    @classmethod
+    def tearDownClass(cls):
+        print("Tearing down TestUserModel class")
+        return super().tearDownClass()
     
     def setUp(self):
-        """Create test database tables before each test."""
+        print("\nSet Up Method")
         with app.app_context():
             db.create_all()
     
     def tearDown(self):
-        """Clean up test database after each test."""
+        print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
-    def test_user_creation(self):
-        """
-        Test creating a new user.
-        
-        Week 3 Concept: Testing function behavior
-        Week 9 Concept: Testing OOP constructors
-        """
+    def test1_user_creation(self):
+        # Test creating a new user
         with app.app_context():
             user = User(username='testuser', password='testpass123', role='employee')
             db.session.add(user)
@@ -68,12 +54,8 @@ class TestUserModel(unittest.TestCase):
             self.assertEqual(user.username, 'testuser')
             self.assertEqual(user.role, 'employee')
     
-    def test_password_hashing(self):
-        """
-        Test password hashing functionality.
-        
-        Week 9 Concept: Security testing - password hashing
-        """
+    def test2_password_hashing(self):
+        # Test password hashing functionality
         with app.app_context():
             user = User(username='testuser', password='mypassword', role='admin')
             db.session.add(user)
@@ -84,15 +66,10 @@ class TestUserModel(unittest.TestCase):
             # Should contain hash prefix
             self.assertTrue(user.password_hash.startswith('scrypt:'))
     
-    def test_password_verification(self):
-        """
-        Test password checking works correctly.
-        
-        Week 2 Concept: Boolean logic and assertions
-        Week 9 Concept: Authentication testing
-        """
+    def test4_password_verification(self):
+        # Test password checking works correctly
         with app.app_context():
-            user = User(username='testuser', password='correctpassword', role='employee')
+            user = User(username='verifyuser', password='correctpassword', role='employee')
             db.session.add(user)
             db.session.commit()
             
@@ -101,13 +78,8 @@ class TestUserModel(unittest.TestCase):
             # Wrong password should fail
             self.assertFalse(user.check_password('wrongpassword'))
     
-    def test_user_to_dict(self):
-        """
-        Test User to_dict() method for JSON serialization.
-        
-        Week 5 Concept: Dictionary operations
-        Week 8 Concept: Data serialization for APIs
-        """
+    def test5_user_to_dict(self):
+        # Test User to_dict() method for JSON serialization
         with app.app_context():
             user = User(username='testuser', password='password', role='admin')
             db.session.add(user)
@@ -124,23 +96,32 @@ class TestUserModel(unittest.TestCase):
 
 
 class TestDepartmentModel(unittest.TestCase):
-    """Test Department model functionality."""
-    
-    def setUp(self):
-        """Create test database before each test."""
+    @classmethod
+    def setUpClass(cls):
+        print("Setting up TestDepartmentModel class")
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['TESTING'] = True
+        return super().setUpClass()
+    
+    @classmethod
+    def tearDownClass(cls):
+        print("Tearing down TestDepartmentModel class")
+        return super().tearDownClass()
+    
+    def setUp(self):
+        print("\nSet Up Method")
         with app.app_context():
             db.create_all()
     
     def tearDown(self):
-        """Clean up after each test."""
+        print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
-    def test_department_creation(self):
-        """Test creating a department."""
+    def test1_department_creation(self):
+        # Test creating a department
         with app.app_context():
             dept = Department(name='Engineering', description='Software Development')
             db.session.add(dept)
@@ -150,12 +131,8 @@ class TestDepartmentModel(unittest.TestCase):
             self.assertEqual(dept.name, 'Engineering')
             self.assertEqual(dept.description, 'Software Development')
     
-    def test_department_employee_count(self):
-        """
-        Test get_employee_count() method.
-        
-        Week 9 Concept: Testing OOP methods and business logic
-        """
+    def test2_department_employee_count(self):
+        # Test get_employee_count() method
         with app.app_context():
             # Create department and role
             dept = Department(name='HR', description='Human Resources')
@@ -183,13 +160,8 @@ class TestDepartmentModel(unittest.TestCase):
             # Should have 1 employee
             self.assertEqual(dept.get_employee_count(), 1)
     
-    def test_department_can_delete(self):
-        """
-        Test can_delete() business logic.
-        
-        Week 2 Concept: Boolean logic
-        Week 9 Concept: Testing business rules
-        """
+    def test3_department_can_delete(self):
+        # Test can_delete() business logic
         with app.app_context():
             dept = Department(name='Marketing', description='Marketing Team')
             db.session.add(dept)
@@ -200,23 +172,32 @@ class TestDepartmentModel(unittest.TestCase):
 
 
 class TestEmployeeModel(unittest.TestCase):
-    """Test Employee model functionality."""
-    
-    def setUp(self):
-        """Set up test database."""
+    @classmethod
+    def setUpClass(cls):
+        print("Setting up TestEmployeeModel class")
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['TESTING'] = True
+        return super().setUpClass()
+    
+    @classmethod
+    def tearDownClass(cls):
+        print("Tearing down TestEmployeeModel class")
+        return super().tearDownClass()
+    
+    def setUp(self):
+        print("\nSet Up Method")
         with app.app_context():
             db.create_all()
     
     def tearDown(self):
-        """Clean up test database."""
+        print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
-    def test_employee_creation(self):
-        """Test creating an employee with all required fields."""
+    def test4_employee_creation(self):
+        # Test creating an employee with all required fields
         with app.app_context():
             # Create dependencies
             dept = Department(name='IT', description='IT Department')
@@ -243,13 +224,8 @@ class TestEmployeeModel(unittest.TestCase):
             self.assertEqual(emp.email, 'jane@test.com')
             self.assertEqual(emp.status, 'active')  # Default value
     
-    def test_employee_attendance_percentage(self):
-        """
-        Test get_attendance_percentage() calculation.
-        
-        Week 4 Concept: Working with algorithms and calculations
-        Week 5 Concept: Data processing
-        """
+    def test1_employee_attendance_percentage(self):
+        # Test get_attendance_percentage() calculation
         with app.app_context():
             # Create employee
             dept = Department(name='Sales', description='Sales Department')
@@ -286,12 +262,8 @@ class TestEmployeeModel(unittest.TestCase):
             # 8 present out of 10 = 80%
             self.assertEqual(emp.get_attendance_percentage(), 80.0)
     
-    def test_employee_total_leave_days(self):
-        """
-        Test get_total_leave_days() calculation.
-        
-        Week 4 Concept: Algorithms and date calculations
-        """
+    def test2_employee_total_leave_days(self):
+        # Test get_total_leave_days() calculation
         with app.app_context():
             # Create employee
             dept = Department(name='Finance', description='Finance Department')
@@ -330,12 +302,8 @@ class TestEmployeeModel(unittest.TestCase):
             # Should be 3 days (inclusive)
             self.assertEqual(emp.get_total_leave_days(), 3)
     
-    def test_employee_activation_methods(self):
-        """
-        Test activate() and deactivate() methods.
-        
-        Week 9 Concept: Testing OOP methods
-        """
+    def test3_employee_activation_methods(self):
+        # Test activate() and deactivate() methods
         with app.app_context():
             dept = Department(name='Operations', description='Operations Team')
             role = Role(title='Operator', description='System Operator')
@@ -370,23 +338,32 @@ class TestEmployeeModel(unittest.TestCase):
 
 
 class TestLeaveRequestModel(unittest.TestCase):
-    """Test LeaveRequest model functionality."""
-    
-    def setUp(self):
-        """Set up test database."""
+    @classmethod
+    def setUpClass(cls):
+        print("Setting up TestLeaveRequestModel class")
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['TESTING'] = True
+        return super().setUpClass()
+    
+    @classmethod
+    def tearDownClass(cls):
+        print("Tearing down TestLeaveRequestModel class")
+        return super().tearDownClass()
+    
+    def setUp(self):
+        print("\nSet Up Method")
         with app.app_context():
             db.create_all()
     
     def tearDown(self):
-        """Clean up test database."""
+        print("Tear Down")
         with app.app_context():
+            db.session.close()
             db.session.remove()
             db.drop_all()
     
-    def test_leave_request_creation(self):
-        """Test creating a leave request."""
+    def test1_leave_request_creation(self):
+        # Test creating a leave request
         with app.app_context():
             # Create employee
             dept = Department(name='Support', description='Customer Support')
@@ -422,12 +399,8 @@ class TestLeaveRequestModel(unittest.TestCase):
             self.assertEqual(leave.status, 'Pending')  # Default status
             self.assertTrue(leave.is_pending())
     
-    def test_leave_calculate_days(self):
-        """
-        Test calculate_days() method.
-        
-        Week 4 Concept: Date calculations and algorithms
-        """
+    def test2_leave_calculate_days(self):
+        # Test calculate_days() method
         with app.app_context():
             dept = Department(name='Design', description='Design Team')
             role = Role(title='Designer', description='UX Designer')
@@ -461,12 +434,8 @@ class TestLeaveRequestModel(unittest.TestCase):
             # 10, 11, 12, 13, 14 = 5 days
             self.assertEqual(leave.calculate_days(), 5)
     
-    def test_leave_approve_reject(self):
-        """
-        Test approve() and reject() methods.
-        
-        Week 9 Concept: Testing state changes in OOP
-        """
+    def test3_leave_approve_reject(self):
+        # Test approve() and reject() methods
         with app.app_context():
             dept = Department(name='Legal', description='Legal Department')
             role = Role(title='Lawyer', description='Legal Counsel')
@@ -525,11 +494,7 @@ class TestLeaveRequestModel(unittest.TestCase):
 
 
 def run_model_tests():
-    """
-    Run all model tests.
-    
-    Week 3 Concept: Test runner function
-    """
+    # Run all model tests
     # Create test suite
     suite = unittest.TestSuite()
     

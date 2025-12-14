@@ -25,13 +25,9 @@ db = SQLAlchemy(model_class=Base)
 app = Flask(__name__)
 
 # Set secret key for session management (required for Flask sessions)
-# Week 9 Concept: Security - Session management with secure secret key
+# Manage user sessions
 # Using environment variable for security - never hardcode secrets
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production-ca2-2024")
-
-# Load configuration from config.py (handles both local and cloud)
-from config import Config
-app.config.from_object(Config)
 
 # ProxyFix middleware needed for proper URL generation with HTTPS
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
@@ -39,8 +35,50 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 # Preferred URL scheme for external URLs
 app.config['PREFERRED_URL_SCHEME'] = 'http'
 
-# Get base directory
+# Configure database connection
+# Use SQLite for testing, MS SQL Server for production
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+# Check if running in test mode
+if os.environ.get('TESTING') == '1' or app.config.get('TESTING'):
+    # Use SQLite for testing
+    app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///:memory:'
+else:
+    # MS SQL Server Settings for production
+    MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
+    MSSQL_DATABASE = 'workflowx'
+    MSSQL_USERNAME = 'workflowx_admin'
+    MSSQL_PASSWORD = 'WorkFlowDB@2025'
+    
+    # Detect available ODBC driver
+    try:
+        import pyodbc
+        drivers = [x for x in pyodbc.drivers() if 'SQL Server' in x]
+        if any('17' in d for d in drivers):
+            MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
+        elif any('18' in d for d in drivers):
+            MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
+        else:
+            MSSQL_DRIVER = 'SQL Server'
+    except:
+        MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
+    
+    # Build MS SQL Server connection string using SQL Server Authentication
+    from urllib.parse import quote_plus
+    app.config["SQLALCHEMY_DATABASE_URI"] = (
+        f'mssql+pyodbc://{MSSQL_USERNAME}:{quote_plus(MSSQL_PASSWORD)}@{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+        f'driver={MSSQL_DRIVER}&timeout=5'
+    )
+
+# Database engine options
+# Database configuration
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,  # Recycle connections after 5 minutes
+    "pool_pre_ping": True,  # Verify connections before using them
+}
+
+# Disable modification tracking to save resources
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # File Upload Configuration
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'images', 'profiles')

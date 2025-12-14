@@ -10,8 +10,6 @@ CA-2 Testing Requirements:
 - Integration tests for API endpoints
 - Integration tests for database operations
 
-Week 3 Concept: Python packages and imports
-Week 9 Concept: Software testing and quality assurance
 """
 
 __version__ = "1.0.0"

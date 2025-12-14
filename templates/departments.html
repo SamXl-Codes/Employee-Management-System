@@ -94,7 +94,7 @@
                                 {{ emp.role.title if emp.role else 'No Role' }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900">${{ "{:,.2f}".format(emp.salary) if emp.salary else '0.00' }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">€{{ "{:,.2f}".format(emp.salary) if emp.salary else '0.00' }}</td>
                         {% if user_role == 'admin' %}
                         <td class="px-4 py-3 text-sm">
                             <div class="flex gap-2">
@@ -119,12 +119,6 @@
         {% endif %}
     </div>
     {% endfor %}
-    
-    {% if not departments %}
-    <div class="col-span-3 text-center py-12">
-        <p class="text-gray-500">No departments found. Add your first department to get started!</p>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Add Department Modal -->

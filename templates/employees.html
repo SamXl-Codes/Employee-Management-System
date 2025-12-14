@@ -97,7 +97,7 @@
                     <td class="text-gray-600">{{ employee.phone or 'N/A' }}</td>
                     <td>{{ employee.department.name if employee.department else 'N/A' }}</td>
                     <td>{{ employee.role.title if employee.role else 'N/A' }}</td>
-                    <td class="font-mono">${{ "{:,.2f}".format(employee.salary|float) if employee.salary else '0.00' }}</td>
+                    <td class="font-mono">€{{ "{:,.2f}".format(employee.salary|float) if employee.salary else '0.00' }}</td>
                     <td>
                         <span class="status-badge status-{{ employee.status.lower() }}">
                             {{ employee.status }}
