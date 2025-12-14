@@ -44,25 +44,36 @@ def inject_unread_messages():
     """
     Context processor to inject unread message count into all templates.
     Makes unread_messages_count available globally for badge notifications.
+    Deduplicates broadcast messages so each shows as +1 instead of +16.
     """
     unread_count = 0
     if 'user_id' in session and session.get('role') == 'employee':
         try:
-            from sqlalchemy import inspect
-            # Check if deleted_at column exists
-            inspector = inspect(db.engine)
-            columns = [col['name'] for col in inspector.get_columns('messages')]
-            has_deleted = 'deleted_at' in columns
-            
-            # Count unread messages for this employee (both direct and broadcast)
+            from sqlalchemy import text
             user_id = session['user_id']
-            query = Message.query.filter(
-                ((Message.recipient_id == user_id) | (Message.is_broadcast == True)),
-                Message.is_read == False
-            )
-            if has_deleted:
-                query = query.filter(Message.deleted_at.is_(None))
-            unread_count = query.count()
+            
+            # Get all unread messages with broadcast info for deduplication
+            query = text("""
+                SELECT message_id, is_broadcast, subject, sender_id
+                FROM messages
+                WHERE recipient_id = :user_id
+                AND is_read = 0
+            """)
+            result = db.session.execute(query, {'user_id': user_id})
+            rows = result.fetchall()
+            
+            # Deduplicate broadcasts (show each broadcast as 1, not 16)
+            seen_broadcasts = set()
+            for row in rows:
+                is_broadcast = bool(row[1])
+                if is_broadcast:
+                    broadcast_key = (row[2], row[3])  # (subject, sender_id)
+                    if broadcast_key not in seen_broadcasts:
+                        seen_broadcasts.add(broadcast_key)
+                        unread_count += 1
+                else:
+                    unread_count += 1
+                    
         except Exception as e:
             app.logger.error(f"Error counting unread messages: {str(e)}")
             unread_count = 0
