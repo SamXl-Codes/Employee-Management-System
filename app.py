@@ -36,7 +36,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['PREFERRED_URL_SCHEME'] = 'http'
 
 # Configure database connection
-# Use SQLite for testing, MS SQL Server for production
+# Use SQLite for testing or cloud deployment, MS SQL Server for local production
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # Check if running in test mode
@@ -44,15 +44,26 @@ if os.environ.get('TESTING') == '1' or app.config.get('TESTING'):
     # Use SQLite for testing
     app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///:memory:'
 else:
-    # MS SQL Server Settings for production
-    MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
-    MSSQL_DATABASE = 'workflowx'
-    MSSQL_USERNAME = 'workflowx_admin'
-    MSSQL_PASSWORD = 'WorkFlowDB@2025'
-    
-    # Detect available ODBC driver
+    # Try to detect if pyodbc is available (local) or not (Railway/cloud)
     try:
         import pyodbc
+        HAS_PYODBC = True
+    except ImportError:
+        HAS_PYODBC = False
+    
+    if not HAS_PYODBC:
+        # Cloud deployment (Railway, Render, etc.) - Use SQLite
+        print("[CONFIG] Using SQLite database (Cloud deployment)")
+        db_path = os.path.join(basedir, 'workflowx.db')
+        app.config["SQLALCHEMY_DATABASE_URI"] = f'sqlite:///{db_path}'
+    else:
+        # MS SQL Server Settings for local production
+        MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
+        MSSQL_DATABASE = 'workflowx'
+        MSSQL_USERNAME = 'workflowx_admin'
+        MSSQL_PASSWORD = 'WorkFlowDB@2025'
+        
+        # Detect available ODBC driver
         drivers = [x for x in pyodbc.drivers() if 'SQL Server' in x]
         if any('17' in d for d in drivers):
             MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
@@ -60,15 +71,13 @@ else:
             MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
         else:
             MSSQL_DRIVER = 'SQL Server'
-    except:
-        MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
-    
-    # Build MS SQL Server connection string using SQL Server Authentication
-    from urllib.parse import quote_plus
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f'mssql+pyodbc://{MSSQL_USERNAME}:{quote_plus(MSSQL_PASSWORD)}@{MSSQL_SERVER}/{MSSQL_DATABASE}?'
-        f'driver={MSSQL_DRIVER}&timeout=5'
-    )
+        
+        # Build MS SQL Server connection string using SQL Server Authentication
+        from urllib.parse import quote_plus
+        app.config["SQLALCHEMY_DATABASE_URI"] = (
+            f'mssql+pyodbc://{MSSQL_USERNAME}:{quote_plus(MSSQL_PASSWORD)}@{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+            f'driver={MSSQL_DRIVER}&timeout=5'
+        )
 
 # Database engine options
 # Database configuration
