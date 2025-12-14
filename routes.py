@@ -3830,7 +3830,7 @@ def admin_send_message():
                         'body': body,
                         'is_broadcast': False,
                         'is_read': False,
-                        'sent_at': datetime.utcnow().isoformat()
+                        'sent_at': datetime.utcnow()
                     })
                     db.session.commit()
                 else:
@@ -4116,7 +4116,7 @@ def view_message(message_id):
                     WHERE message_id = :message_id
                 """)
                 db.session.execute(update_query, {
-                    'read_at': datetime.utcnow().isoformat(),
+                    'read_at': datetime.utcnow(),
                     'message_id': self.message_id
                 })
                 self.is_read = True
@@ -4309,7 +4309,7 @@ def employee_send_message():
                 'body': body,
                 'is_broadcast': False,
                 'is_read': False,
-                'sent_at': datetime.utcnow().isoformat()
+                'sent_at': datetime.utcnow()
             })
             db.session.commit()
             log_audit('CREATE', 'Message', None, f'Employee sent message: {subject}')
@@ -4396,7 +4396,7 @@ def save_draft():
                     'is_broadcast': is_broadcast,
                     'is_read': 0,
                     'is_draft': 1,
-                    'sent_at': datetime.utcnow().isoformat()
+                    'sent_at': datetime.utcnow()
                 })
             else:
                 # Old schema without is_draft - save as regular message with special subject prefix
@@ -4413,7 +4413,7 @@ def save_draft():
                     'body': body,
                     'is_broadcast': is_broadcast,
                     'is_read': 0,
-                    'sent_at': datetime.utcnow().isoformat()
+                    'sent_at': datetime.utcnow()
                 })
                 flash('Draft saved (will appear in sent messages until migration completes)', 'info')
                 
@@ -4461,7 +4461,7 @@ def delete_message(message_id):
                 # Soft delete with raw SQL
                 update_query = text("UPDATE messages SET deleted_at = :deleted_at WHERE message_id = :message_id")
                 db.session.execute(update_query, {
-                    'deleted_at': datetime.utcnow().isoformat(),
+                    'deleted_at': datetime.utcnow(),
                     'message_id': message_id
                 })
                 db.session.commit()
