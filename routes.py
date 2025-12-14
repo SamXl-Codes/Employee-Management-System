@@ -4365,11 +4365,11 @@ def save_draft():
             else:
                 # Without is_draft column, can't reliably find drafts
                 flash('Draft update not available without migration', 'warning')
-                return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+                return redirect(url_for('admin_messages' if session.get('role') == 'admin' else 'employee_messages'))
             
             if not draft:
                 flash('Draft not found or access denied', 'danger')
-                return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+                return redirect(url_for('admin_messages' if session.get('role') == 'admin' else 'employee_messages'))
             
             draft.subject = subject
             draft.body = body
@@ -4494,12 +4494,12 @@ def send_draft(draft_id):
         
         if not draft:
             flash('Draft not found or already sent', 'danger')
-            return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+            return redirect(url_for('admin_messages' if session.get('role') == 'admin' else 'employee_messages'))
         
         # Validate required fields
         if not draft.subject or not draft.body:
             flash('Subject and body are required to send message', 'danger')
-            return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+            return redirect(url_for('admin_messages' if session.get('role') == 'admin' else 'employee_messages'))
         
         if draft.is_broadcast:
             # Send broadcast - create copies for all employees
@@ -4529,7 +4529,7 @@ def send_draft(draft_id):
             # Send to specific recipient
             if not draft.recipient_id:
                 flash('Please select a recipient', 'danger')
-                return redirect(url_for('compose_message' if session.get('role') == 'admin' else 'employee_messages'))
+                return redirect(url_for('admin_messages' if session.get('role') == 'admin' else 'employee_messages'))
             
             # Mark as sent
             draft.is_draft = False
