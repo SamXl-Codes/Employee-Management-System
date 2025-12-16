@@ -39,10 +39,14 @@ app.config['PREFERRED_URL_SCHEME'] = 'http'
 # Use SQLite for testing, MS SQL Server for production
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Check if running in test mode
+# Check if running in test mode or SQLite mode (for developers without SQL Server)
 if os.environ.get('TESTING') == '1' or app.config.get('TESTING'):
-    # Use SQLite for testing
+    # Use SQLite in-memory for testing
     app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///:memory:'
+elif os.environ.get('USE_SQLITE') == '1':
+    # Use SQLite file database for development (for team members without SQL Server)
+    app.config["SQLALCHEMY_DATABASE_URI"] = f'sqlite:///{os.path.join(basedir, "workflowx.db")}'
+    print("🗄️  Using SQLite database: workflowx.db")
 else:
     # MS SQL Server Settings for production
     MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
@@ -60,6 +64,7 @@ else:
             MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
         else:
             MSSQL_DRIVER = 'SQL Server'
+        print(f"🗄️  Using MS SQL Server: {MSSQL_SERVER}")
     except:
         MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
     
