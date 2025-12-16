@@ -5,14 +5,11 @@ echo   George's SQL Server Configuration
 echo ========================================
 echo.
 
-REM *** CHANGE THIS TO YOUR SQL SERVER INSTANCE NAME ***
-REM Common values:
-REM   - localhost              (for default instance)
-REM   - localhost\SQLEXPRESS   (for SQL Express default)
-REM   - localhost\EXPRESS      (alternative name)
-REM   - localhost\SQLEXPRESS01 (Samuel's instance)
+REM *** GEORGE'S SQL SERVER INSTANCE ***
+REM George's instance: MSSQL$SQLEXPRESS03
+REM Samuel's instance: MSSQL$SQLEXPRESS01
 
-set MSSQL_SERVER=localhost\SQLEXPRESS
+set MSSQL_SERVER=localhost\SQLEXPRESS03
 
 REM Database credentials (keep these the same)
 set MSSQL_DATABASE=workflowx
