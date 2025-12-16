@@ -48,8 +48,7 @@ else:
     # George can set his own SQL Server instance name
     MSSQL_SERVER = os.environ.get('MSSQL_SERVER', 'localhost\\SQLEXPRESS01')
     MSSQL_DATABASE = os.environ.get('MSSQL_DATABASE', 'workflowx')
-    MSSQL_USERNAME = os.environ.get('MSSQL_USERNAME', 'workflowx_admin')
-    MSSQL_PASSWORD = os.environ.get('MSSQL_PASSWORD', 'WorkFlowDB@2025')
+    USE_WINDOWS_AUTH = os.environ.get('USE_WINDOWS_AUTH', '0') == '1'
     
     # Detect available ODBC driver
     try:
@@ -61,16 +60,29 @@ else:
             MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
         else:
             MSSQL_DRIVER = 'SQL Server'
-        print(f"🗄️  Using MS SQL Server: {MSSQL_SERVER} | Database: {MSSQL_DATABASE}")
+        
+        auth_method = "Windows Authentication" if USE_WINDOWS_AUTH else "SQL Authentication"
+        print(f"🗄️  Using MS SQL Server: {MSSQL_SERVER} | Database: {MSSQL_DATABASE} | Auth: {auth_method}")
     except:
         MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
     
-    # Build MS SQL Server connection string using SQL Server Authentication
+    # Build MS SQL Server connection string
     from urllib.parse import quote_plus
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f'mssql+pyodbc://{MSSQL_USERNAME}:{quote_plus(MSSQL_PASSWORD)}@{MSSQL_SERVER}/{MSSQL_DATABASE}?'
-        f'driver={MSSQL_DRIVER}&timeout=5'
-    )
+    
+    if USE_WINDOWS_AUTH:
+        # Windows Authentication (Trusted Connection)
+        app.config["SQLALCHEMY_DATABASE_URI"] = (
+            f'mssql+pyodbc://{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+            f'driver={MSSQL_DRIVER}&trusted_connection=yes&timeout=5'
+        )
+    else:
+        # SQL Server Authentication (username/password)
+        MSSQL_USERNAME = os.environ.get('MSSQL_USERNAME', 'workflowx_admin')
+        MSSQL_PASSWORD = os.environ.get('MSSQL_PASSWORD', 'WorkFlowDB@2025')
+        app.config["SQLALCHEMY_DATABASE_URI"] = (
+            f'mssql+pyodbc://{MSSQL_USERNAME}:{quote_plus(MSSQL_PASSWORD)}@{MSSQL_SERVER}/{MSSQL_DATABASE}?'
+            f'driver={MSSQL_DRIVER}&timeout=5'
+        )
 
 # Database engine options
 # Database configuration

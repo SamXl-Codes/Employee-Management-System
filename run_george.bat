@@ -11,10 +11,16 @@ REM Samuel's instance: MSSQL$SQLEXPRESS01
 
 set MSSQL_SERVER=localhost\SQLEXPRESS03
 
-REM Database credentials (keep these the same)
+REM Database name
 set MSSQL_DATABASE=workflowx
-set MSSQL_USERNAME=workflowx_admin
-set MSSQL_PASSWORD=WorkFlowDB@2025
+
+REM *** USE WINDOWS AUTHENTICATION (No username/password needed) ***
+set USE_WINDOWS_AUTH=1
+
+REM If you want to use SQL Authentication instead, comment out the line above
+REM and uncomment these:
+REM set MSSQL_USERNAME=workflowx_admin
+REM set MSSQL_PASSWORD=WorkFlowDB@2025
 
 echo.
 echo Connecting to SQL Server: %MSSQL_SERVER%
