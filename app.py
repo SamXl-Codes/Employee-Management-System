@@ -39,20 +39,17 @@ app.config['PREFERRED_URL_SCHEME'] = 'http'
 # Use SQLite for testing, MS SQL Server for production
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Check if running in test mode or SQLite mode (for developers without SQL Server)
+# Check if running in test mode
 if os.environ.get('TESTING') == '1' or app.config.get('TESTING'):
     # Use SQLite in-memory for testing
     app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///:memory:'
-elif os.environ.get('USE_SQLITE') == '1':
-    # Use SQLite file database for development (for team members without SQL Server)
-    app.config["SQLALCHEMY_DATABASE_URI"] = f'sqlite:///{os.path.join(basedir, "workflowx.db")}'
-    print("🗄️  Using SQLite database: workflowx.db")
 else:
-    # MS SQL Server Settings for production
-    MSSQL_SERVER = 'localhost\\SQLEXPRESS01'
-    MSSQL_DATABASE = 'workflowx'
-    MSSQL_USERNAME = 'workflowx_admin'
-    MSSQL_PASSWORD = 'WorkFlowDB@2025'
+    # MS SQL Server Settings - Allow configuration via environment variables
+    # George can set his own SQL Server instance name
+    MSSQL_SERVER = os.environ.get('MSSQL_SERVER', 'localhost\\SQLEXPRESS01')
+    MSSQL_DATABASE = os.environ.get('MSSQL_DATABASE', 'workflowx')
+    MSSQL_USERNAME = os.environ.get('MSSQL_USERNAME', 'workflowx_admin')
+    MSSQL_PASSWORD = os.environ.get('MSSQL_PASSWORD', 'WorkFlowDB@2025')
     
     # Detect available ODBC driver
     try:
@@ -64,7 +61,7 @@ else:
             MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
         else:
             MSSQL_DRIVER = 'SQL Server'
-        print(f"🗄️  Using MS SQL Server: {MSSQL_SERVER}")
+        print(f"🗄️  Using MS SQL Server: {MSSQL_SERVER} | Database: {MSSQL_DATABASE}")
     except:
         MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
     

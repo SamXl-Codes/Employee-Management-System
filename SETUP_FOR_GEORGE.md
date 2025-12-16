@@ -1,61 +1,84 @@
 # Quick Setup Guide for George Sherman
 
-## Problem: MS SQL Server Not Installed
-Your computer doesn't have MS SQL Server like Samuel's machine. **Solution: Use SQLite instead!**
+## Problem: SQL Server Connection Error
+Your SQL Server instance name is different from Samuel's. **Solution: Configure your SQL Server instance!**
 
 ---
 
-## **OPTION 1: Use SQLite (RECOMMENDED - Fastest)**
+## **STEP 1: Find Your SQL Server Instance Name**
 
-### Step 1: Set Environment Variable Before Running
+### Method 1: Using PowerShell
 ```powershell
-# In PowerShell, run this BEFORE python main.py:
-$env:USE_SQLITE = "1"
-python main.py
+# Run this command to see all SQL Server instances on your computer
+Get-Service -Name "MSSQL*" | Select-Object Name, DisplayName, Status
+
+# Common instance names:
+# - MSSQLSERVER (default instance) → Use: localhost
+# - MSSQL$SQLEXPRESS → Use: localhost\SQLEXPRESS
+# - MSSQL$EXPRESS → Use: localhost\EXPRESS
+# - MSSQL$SQLEXPRESS01 → Use: localhost\SQLEXPRESS01
 ```
 
-### Step 2: Run Application
-```powershell
-python main.py
+### Method 2: Using SQL Server Management Studio (SSMS)
+```
+1. Open SSMS
+2. Look at "Server name" dropdown when connecting
+3. Your instance name is shown there
+4. Copy it exactly as shown
 ```
 
-Application will run on: **http://127.0.0.1:8080**
-
-### To Always Use SQLite (Permanent)
-```powershell
-# Set environment variable permanently (Run PowerShell as Administrator)
-[System.Environment]::SetEnvironmentVariable('USE_SQLITE', '1', 'User')
-
-# Restart PowerShell, then:
-python main.py
+### Method 3: Using Command Prompt
+```cmd
+sqlcmd -L
 ```
+This lists all SQL Server instances on your network.
 
 ---
 
-## **OPTION 2: Create a Batch File (EASIEST)**
+## **STEP 2: Create Batch File with YOUR Instance Name**
 
-### Create `run_george.bat` in project folder:
+### Edit `run_george.bat` in project folder:
 ```batch
 @echo off
-echo Starting WorkFlowX with SQLite...
-set USE_SQLITE=1
+echo ========================================
+echo   WorkFlowX - Employee Management System
+echo   George's SQL Server Configuration
+echo ========================================
+echo.
+
+REM *** CHANGE THIS TO YOUR SQL SERVER INSTANCE NAME ***
+set MSSQL_SERVER=localhost\SQLEXPRESS
+
+REM Database credentials (same as Samuel's)
+set MSSQL_DATABASE=workflowx
+set MSSQL_USERNAME=workflowx_admin
+set MSSQL_PASSWORD=WorkFlowDB@2025
+
+echo Connecting to SQL Server: %MSSQL_SERVER%
+echo Database: %MSSQL_DATABASE%
+echo.
+
+REM Run the Flask application
 python main.py
+
 pause
 ```
 
-### Then just double-click `run_george.bat` to start the app!
+### **IMPORTANT:** Change `localhost\SQLEXPRESS` to YOUR instance name!
+
+### Common Instance Names:
+- **Default instance:** `localhost` (no backslash)
+- **Named instance:** `localhost\SQLEXPRESS` or `localhost\EXPRESS`
+- **Samuel's instance:** `localhost\SQLEXPRESS01`
 
 ---
 
-## **OPTION 3: Install MS SQL Server (NOT RECOMMENDED - Takes 2+ hours)**
+## **STEP 3: Double-Click `run_george.bat` to Start**
 
-Only do this if you really want SQL Server:
-1. Download SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
-2. Install with default settings
-3. Note the instance name during installation
-4. Update app.py with your instance name
-
-**This is overkill - use SQLite instead!**
+Just double-click the batch file and it will:
+1. Set your SQL Server instance name
+2. Connect to the database
+3. Start the application on http://127.0.0.1:8080
 
 ---
 
