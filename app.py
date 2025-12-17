@@ -45,8 +45,7 @@ if os.environ.get('TESTING') == '1' or app.config.get('TESTING'):
     app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///:memory:'
 else:
     # MS SQL Server Settings - Allow configuration via environment variables
-    # George can set his own SQL Server instance name
-    MSSQL_SERVER = os.environ.get('MSSQL_SERVER', 'localhost\\SQLEXPRESS01')
+    MSSQL_SERVER = os.environ.get('MSSQL_SERVER', 'localhost\\SQLEXPRESS03')
     MSSQL_DATABASE = os.environ.get('MSSQL_DATABASE', 'workflowx')
     USE_WINDOWS_AUTH = os.environ.get('USE_WINDOWS_AUTH', '0') == '1'
     
