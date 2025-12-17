@@ -528,15 +528,15 @@ def add_employee():
                     )
                     db.session.add(new_user)
                     db.session.commit()
-                    flash(f'{message} ✅ Login account created! Username: {email}, Default Password: {default_password}', 'success')
-                    print(f"✅ Created User account for: {email} with default password: {default_password}")  # Debug log
+                    flash(f'{message} Login account created! Username: {email}, Default Password: {default_password}', 'success')
+                    print(f"Created User account for: {email} with default password: {default_password}")  # Debug log
                 else:
                     flash(f'{message} (Login account already exists)', 'success')
-                    print(f"⚠️ User account already exists for: {email}")  # Debug log
+                    print(f"User account already exists for: {email}")  # Debug log
             except Exception as e:
-                print(f"❌ Error creating user account: {str(e)}")  # Debug log
+                print(f"Error creating user account: {str(e)}")  # Debug log
                 db.session.rollback()
-                flash(f'{message} ⚠️ Warning: Could not create login account. Contact IT Support.', 'warning')
+                flash(f'{message} Warning: Could not create login account. Contact IT Support.', 'warning')
             
             return redirect(url_for('employees'))
         else:
@@ -1113,13 +1113,13 @@ def run_migration():
         db.session.commit()
         
         log_audit('UPDATE', 'Database', None, 'Migration completed: Added draft and delete columns')
-        flash('✅ Migration completed successfully! Draft and delete features are now enabled.', 'success')
+        flash('Migration completed successfully! Draft and delete features are now enabled.', 'success')
         app.logger.info("Migration completed successfully!")
         
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Migration failed: {str(e)}")
-        flash(f'❌ Migration failed: {str(e)}', 'danger')
+        flash(f'Migration failed: {str(e)}', 'danger')
     
     return redirect(url_for('admin_messages'))
 
@@ -1172,11 +1172,11 @@ def purge_inactive_users():
         
         message_parts = []
         if deleted_count > 0:
-            message_parts.append(f'✅ Successfully purged {deleted_count} inactive user account{"s" if deleted_count != 1 else ""}')
+            message_parts.append(f'Successfully purged {deleted_count} inactive user account{"s" if deleted_count != 1 else ""}')
         if skipped_count > 0:
-            message_parts.append(f'⚠️ Skipped {skipped_count} employee{"s" if skipped_count != 1 else ""} with payroll history (financial records preserved)')
+            message_parts.append(f'Skipped {skipped_count} employee{"s" if skipped_count != 1 else ""} with payroll history (financial records preserved)')
         if deleted_count == 0 and skipped_count > 0:
-            message_parts = [f'⚠️ Cannot purge {skipped_count} inactive employee{"s" if skipped_count != 1 else ""} - they have payroll records. Delete payroll records first if you want to remove these employees.']
+            message_parts = [f'Cannot purge {skipped_count} inactive employee{"s" if skipped_count != 1 else ""} - they have payroll records. Delete payroll records first if you want to remove these employees.']
         
         return jsonify({
             'success': True, 
@@ -2488,9 +2488,9 @@ def upload_employee_photo():
         if saved_filename:
             emp.profile_image = saved_filename
             db.session.commit()
-            flash('✅ Profile photo updated successfully!', 'success')
+            flash('Profile photo updated successfully!', 'success')
         else:
-            flash('❌ Error uploading photo. Please try again.', 'danger')
+            flash('Error uploading photo. Please try again.', 'danger')
     else:
         flash('Invalid file type. Please upload JPG, PNG, or GIF only.', 'danger')
     
@@ -3214,12 +3214,12 @@ def delete_payroll_record(payroll_id):
             f'Deleted payroll record for {employee_name} (ID: {employee_id}), Period: {pay_period}, Amount: €{net_salary:.2f}'
         )
         
-        flash(f'✅ Successfully deleted payroll record for {employee_name} ({pay_period})', 'success')
+        flash(f'Successfully deleted payroll record for {employee_name} ({pay_period})', 'success')
         
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error deleting payroll record {payroll_id}: {str(e)}")
-        flash(f'❌ Error deleting payroll record: {str(e)}', 'danger')
+        flash(f'Error deleting payroll record: {str(e)}', 'danger')
     
     return redirect(url_for('payroll_dashboard'))
 

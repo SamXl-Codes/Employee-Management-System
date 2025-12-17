@@ -62,7 +62,7 @@ else:
             MSSQL_DRIVER = 'SQL Server'
         
         auth_method = "Windows Authentication" if USE_WINDOWS_AUTH else "SQL Authentication"
-        print(f"🗄️  Using MS SQL Server: {MSSQL_SERVER} | Database: {MSSQL_DATABASE} | Auth: {auth_method}")
+        print(f"Using MS SQL Server: {MSSQL_SERVER} | Database: {MSSQL_DATABASE} | Auth: {auth_method}")
     except:
         MSSQL_DRIVER = 'ODBC Driver 17 for SQL Server'
     

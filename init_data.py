@@ -24,7 +24,7 @@ def create_sample_data():
     Database configuration
     """
     try:
-        print("🚀 Starting data initialization...")
+        print("Starting data initialization...")
         
         with app.app_context():
             # Clear existing data (for fresh start)
@@ -38,7 +38,7 @@ def create_sample_data():
             
             db.session.add(admin)
             db.session.commit()
-            print("✅ Created admin user")
+            print("Created admin user")
             
             
             print("🏢 Creating departments...")
@@ -54,7 +54,7 @@ def create_sample_data():
                 db.session.add(dept)
             
             db.session.commit()
-            print(f"✅ Created {len(departments)} departments")
+            print(f"Created {len(departments)} departments")
             
             
             print("💼 Creating job roles...")
@@ -87,7 +87,7 @@ def create_sample_data():
                 db.session.add(role)
             
             db.session.commit()
-            print(f"✅ Created {len(roles)} job roles")
+            print(f"Created {len(roles)} job roles")
             
             # Create Employees
             # Company founded: December 2020 (5 years ago)
@@ -152,7 +152,7 @@ def create_sample_data():
                 db.session.add(emp)
             
             db.session.commit()
-            print(f"✅ Created {len(employees)} employees")
+            print(f"Created {len(employees)} employees")
             
             
             print("🔐 Creating user accounts for employees...")
@@ -170,7 +170,7 @@ def create_sample_data():
                 employee_users_created += 1
             
             db.session.commit()
-            print(f"✅ Created {employee_users_created} employee user accounts (default password: {default_password})")
+            print(f"Created {employee_users_created} employee user accounts (default password: {default_password})")
             
             
             print("📅 Creating realistic attendance records based on hire dates...")
@@ -229,7 +229,7 @@ def create_sample_data():
                     current_date += timedelta(days=1)
             
             db.session.commit()
-            print(f"✅ Created {attendance_count} realistic attendance records (workdays only)")
+            print(f"Created {attendance_count} realistic attendance records (workdays only)")
             
             
             print("🏖️ Creating realistic leave requests based on employee tenure...")
@@ -333,26 +333,26 @@ def create_sample_data():
                 db.session.add(leave)
             
             db.session.commit()
-            print(f"✅ Created {leave_count} realistic leave requests (approved historical + some pending)")
+            print(f"Created {leave_count} realistic leave requests (approved historical + some pending)")
             
             print("\n" + "=" * 70)
             print("🎉 Database initialization completed successfully!")
             print("=" * 70)
-            print("\n📋 Summary:")
+            print("\nSummary:")
             print(f"   Users: {employee_users_created + 1} (1 admin + {employee_users_created} employees)")
             print(f"   Departments: {len(departments)}")
             print(f"   Job Roles: {len(roles)}")
             print(f"   Employees: {len(employees)}")
             print(f"   Attendance Records: {attendance_count}")
             print(f"   Leave Requests: {leave_count}")
-            print("\n📊 Data Authenticity:")
-            print("   ✓ Company founded: December 2020 (5 years ago)")
-            print("   ✓ Employee hire dates span from Dec 2020 to Jan 2024")
-            print("   ✓ Attendance records generated from each employee's hire date")
-            print("   ✓ Weekdays only (Monday-Friday) - no weekend records")
-            print("   ✓ Leave requests realistic per employee tenure")
-            print("   ✓ Historical data reflects years of employment accurately")
-            print("\n🔐 Login Credentials:")
+            print("\nData Authenticity:")
+            print("   - Company founded: December 2020 (5 years ago)")
+            print("   - Employee hire dates span from Dec 2020 to Jan 2024")
+            print("   - Attendance records generated from each employee's hire date")
+            print("   - Weekdays only (Monday-Friday) - no weekend records")
+            print("   - Leave requests realistic per employee tenure")
+            print("   - Historical data reflects years of employment accurately")
+            print("\nLogin Credentials:")
             print("\n   ADMIN:")
             print("     Username: admin")
             print("     Password: admin123")
@@ -363,12 +363,12 @@ def create_sample_data():
             print("     - john.smith@workflowx.com / WorkFlow@2025")
             print("     - sarah.johnson@workflowx.com / WorkFlow@2025")
             print("     - michael.chen@workflowx.com / WorkFlow@2025")
-            print("\n⚠️  IMPORTANT: Employees should change their password after first login.")
+            print("\nIMPORTANT: Employees should change their password after first login.")
             print("   Contact IT Support for password reset assistance.")
-            print("\n✨ You can now start the application and login!")
+            print("\nYou can now start the application and login!")
             
     except Exception as e:
-        print(f"\n❌ Error during initialization: {str(e)}")
+        print(f"\nError during initialization: {str(e)}")
         db.session.rollback()
         sys.exit(1)
 

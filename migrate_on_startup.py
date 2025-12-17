@@ -20,10 +20,10 @@ def run_migrations():
         from scripts.add_message_draft_columns import add_message_columns
         add_message_columns()
         
-        print("\n✓ All migrations completed successfully!")
+        print("\nAll migrations completed successfully!")
         
     except Exception as e:
-        print(f"\n✗ Migration error: {str(e)}")
+        print(f"\nMigration error: {str(e)}")
         print("Application will continue with existing schema.")
     
     print("=" * 60)
